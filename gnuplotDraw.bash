@@ -117,18 +117,11 @@ adaptXRangeIfSingleValue(){
 #   MAIN PART OF THIS SCRIPT
 #############################
 
-
-# We check if the output files and folders already exist
-if [ -d "summary/synthese-$1-$2.txt" ]
-then
-    echo "ERROR: you have to delete the folder 'summary/synthese-$1-$2.txt 'before running this script"
-    exit 1
-fi
-
 checkDirAvailability "graphs"
 
 # We initialize the needed variables
 gnuplot_instructions=""
+gnuplot_instructionsALL=""
 
 # If there is only one point we don't draw a line, we only give one dot, we also have to specify the range (if we don't do this then it will be adjusted automatically and will display warnings)
 # To do so we use the following variables that may be modified. They will be used when giving instructions to gnuplot.
@@ -136,7 +129,9 @@ gnuplot_instructions=""
 line_style="with lines"
 
 # We get the data needed to create the graphs and the summary
-gnuplot_instructions="'data/graphData.dat' u 1:2 title '' $line_style lc rgb 'blue', "
+gnuplot_instructions="'data/phi.dat' u 1:2 title 'phi(x)' $line_style lc rgb 'blue', 'data/potential.dat' u 1:2 title 'V(x)' $line_style lc rgb 'black'"
+gnuplot_instructionsALL="'data/phiALL.dat' u 1:2 title 'phi(x)' $line_style lc rgb 'blue', 'data/potential.dat' u 1:2 title 'V(x)' $line_style lc rgb 'black'"
 
 # We create the graphs
 gnuplot -e "reset; set terminal jpeg size 1600, 900; set ylabel 'phi'; set xlabel 'x'; set output 'graphs/schrodingerGraph.jpg'; plot $gnuplot_instructions"
+gnuplot -e "reset; set terminal jpeg size 1600, 900; set ylabel 'phi'; set xlabel 'x'; set output 'graphs/schrodingerGraphALL.jpg'; plot $gnuplot_instructionsALL"
