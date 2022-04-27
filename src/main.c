@@ -6,7 +6,7 @@
 #include <gsl/gsl_odeiv2.h>
 #include <gsl/gsl_multiroots.h>
 
-#define N 100
+#define N_POINTS 100 //number of points
 
 /*
 	
@@ -39,12 +39,11 @@ double getPotential(double x){
 }
 
 
-// used to calculate alpha, which is Schrodinger's aquation : phi'' + alpha*phi = 0
+// Calculate alpha which is in the equation of Schrodinger : phi'' + alpha*phi = 0
 double getConstantFromParams(double x, double* params)
 {
 	return params[0]*(params[1]-getPotential(x));
 }
-
 
 // calculate f(y0,y1,y2)
 int func (double x, const double y[], double f[] /* = dydt*/, void *params){
@@ -56,18 +55,9 @@ int func (double x, const double y[], double f[] /* = dydt*/, void *params){
 	return GSL_SUCCESS;
 }
 
-
-struct rparams
+// get an approximation of the values of the function phi(x) in the equation, to find the root
+int functionForRoot(const gsl_vector * input, void *params, gsl_vector * f)
 {
-	double a;
-	double b;
-};
-
-int functionS(const gsl_vector * input, void *params, gsl_vector * f)
-{
-	//double a = ((struct rparams *) params)->a;
-	//double b = ((struct rparams *) params)->b;
-
 	const double energy = gsl_vector_get (input, 0);
 	const double z = gsl_vector_get (input, 1);
 
@@ -80,9 +70,9 @@ int functionS(const gsl_vector * input, void *params, gsl_vector * f)
 	double y[3] = {0 , z, 0}; //(y0,y1,y2)(t=0) = (0,z,0)
 	
 	//We get the values of (y0,y1,y2)
-	for (int i = 1; i <= N; i++)
+	for (int i = 1; i <= N_POINTS; i++)
 	{
-		double xi = i * l / (double)N;
+		double xi = i * l / (double)N_POINTS;
 		int status = gsl_odeiv2_driver_apply (driver, &x, xi, y);
 		if (status != GSL_SUCCESS)
 		{
@@ -98,6 +88,8 @@ int functionS(const gsl_vector * input, void *params, gsl_vector * f)
 	return GSL_SUCCESS;
 }
 
+//FOR DEBUG
+/*
 int print_state (size_t iter, gsl_multiroot_fsolver * s)
 {
 	printf ("iter = %3lu x = % .3f % .3f | f(x) = % .3e % .3e\n", 
@@ -108,7 +100,8 @@ int print_state (size_t iter, gsl_multiroot_fsolver * s)
 		gsl_vector_get (s->f, 1)
 	);
 }
-
+*/
+// Find the roots for the shooting method
 void findRoots(double* roots){
 	const gsl_multiroot_fsolver_type *T;
 	gsl_multiroot_fsolver *s;
@@ -117,8 +110,7 @@ void findRoots(double* roots){
 	size_t i, iter = 0;
 
 	const size_t n = 2;
-	struct rparams params = {1.0, 10.0};
-	gsl_multiroot_function f = {&functionS, n, &params};
+	gsl_multiroot_function f = {&functionForRoot, n, NULL};
 
 	double x_init[2] = {-5.0, -5.0};
 	gsl_vector *x = gsl_vector_alloc (n);
@@ -155,6 +147,8 @@ void findRoots(double* roots){
 	gsl_vector_free (x);
 }
 
+
+// solve the ODE with the correct params (that we got from findRoots())
 void solveAndSaveData(double* params){
 	FILE* dataFile = fopen("data/graphData.dat", "w");
 	
@@ -170,9 +164,9 @@ void solveAndSaveData(double* params){
 	double y[3] = {0 , z, 0}; //(y0,y1,y2)(t=0) = (0,z,0)
 	fprintf(dataFile, "%lf %lf\n", x, y[0]);
 	//We get the values of (y0,y1,y2)
-	for (int i = 1; i <= N; i++)
+	for (int i = 1; i <= N_POINTS; i++)
 	{
-		double xi = i * l / (double)N;
+		double xi = i * l / (double)N_POINTS;
 		int status = gsl_odeiv2_driver_apply (driver, &x, xi, y);
 		if (status != GSL_SUCCESS)
 		{
@@ -187,6 +181,7 @@ void solveAndSaveData(double* params){
 
 	fclose(dataFile);
 }
+
 
 int main(){
 	double roots[2]={0,0};
