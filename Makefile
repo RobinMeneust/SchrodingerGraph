@@ -15,13 +15,13 @@ obj/%.o: src/%.c $(HEAD)
 .PHONY : cleanlinux cleanwin doc run
 
 cleanlinux:
-	rm obj/*.o
+	rm obj/*.o; rm graphs/*.jpg; rm data/*.dat;
 
 cleanwin:
 	del obj\*.o
 
 cleandoclinux:
-	del doxygen\html
+	rm doxygen/html
 
 cleandocwin:
 	del doxygen\html
@@ -30,4 +30,4 @@ doc:
 	doxygen doxygen/Doxyfile
 
 run:
-	$(PROG)
+	$(PROG) && ./gnuplotDraw.bash
