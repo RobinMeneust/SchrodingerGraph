@@ -7,7 +7,6 @@
 #include <gsl/gsl_multiroots.h>
 
 #define N_POINTS 100 //number of points
-#define L 10.0
 
 typedef struct potentialParams{
 	int type;
@@ -62,14 +61,11 @@ int func (double x, const double y[], double f[] /* = dydt*/, void *params){
 }
 
 // get an approximation of the values of the function phi(x) in the equation, to find the root
-int functionForRoot(const gsl_vector * input, void *params, gsl_vector * f)
+int functionForRoot(double z, double params[3], double f[2])
 {
-	const double energy = gsl_vector_get (input, 0);
-	const double z = gsl_vector_get (input, 1);
-
-	double constants[2] = {1, energy} ; //(temporary values) params[0] = 2m/hbar²	params[1] = E
+	double constants[2] = {params[2], params[1]} ; //(temporary values) constants[0] = 2m/hbar²	constants[1] = E
 	gsl_odeiv2_system sys = {func, NULL, 3, &constants}; // we initialize the ODE system
-	double x = 0.0, l = 10.0; // we set the bounds
+	double x = 0.0, l = params[0]; // we set the bounds
 
 	gsl_odeiv2_driver * driver = gsl_odeiv2_driver_alloc_y_new (&sys, gsl_odeiv2_step_rkf45, 1e-6, 1e-6, 0.0); 
 
@@ -77,6 +73,7 @@ int functionForRoot(const gsl_vector * input, void *params, gsl_vector * f)
 	
 	//We get the values of (y0,y1,y2)
 	FILE* dataFile = fopen("data/phiALL.dat", "a"); // USED FOR TESTING
+	fprintf(dataFile, "%lf %lf\n", x, y[0]);
 	for (int i = 1; i <= N_POINTS; i++)
 	{
 		double xi = i * l / (double)N_POINTS;
@@ -91,8 +88,8 @@ int functionForRoot(const gsl_vector * input, void *params, gsl_vector * f)
 		}
 	}
 	fclose(dataFile);
-	gsl_vector_set (f, 0, y[0]); //y0(L)
-	gsl_vector_set (f, 1, y[2]-1); //y2(L)-1
+	f[0]=y[0]; //y0(L)
+	f[1]=y[2]-1; //y3(L)-1
 
 	gsl_odeiv2_driver_free (driver);
 
@@ -112,63 +109,31 @@ int print_state (size_t iter, gsl_multiroot_fsolver * s)
 	);
 }
 */
-// Find the roots for the shooting method
-void findRoots(double* roots){
-	const gsl_multiroot_fsolver_type *T;
-	gsl_multiroot_fsolver *s;
-
-	int status;
-	size_t i, iter = 0;
-
-	const size_t n = 2;
-	gsl_multiroot_function f = {&functionForRoot, n, NULL};
-
-	double x_init[2] = {-5.0, -5.0};
-	gsl_vector *x = gsl_vector_alloc (n);
-
-	gsl_vector_set (x, 0, x_init[0]);
-	gsl_vector_set (x, 1, x_init[1]);
-
-	T = gsl_multiroot_fsolver_hybrids;
-	s = gsl_multiroot_fsolver_alloc (T, 2);
-	gsl_multiroot_fsolver_set (s, &f, x);
-
-	do
-	{
-		iter++;
-		status = gsl_multiroot_fsolver_iterate(s);
-
-		if (status)
-			break;
-
-		status = gsl_multiroot_test_residual (s->f, 1e-7);
+// Find the roots, the shooting method
+void findRoots(double* roots, double params[3]){
+	double y[2]={0.0, 0.0};
+	for(double z=-10.0; z<10.0; z+=1){
+		functionForRoot(z, params, y);
+		if(fabs(y[0])<0.4 && fabs(y[1])<0.4)
+			printf("y0(L)= %lf | y3(L)-1 = %lf\n", y[0], y[1]);
 	}
-	while (status == GSL_CONTINUE && iter < 1000);
-
-	roots[0]=gsl_vector_get (s->x, 0); //E
-	roots[1]=gsl_vector_get (s->x, 1); //z
-
-	printf ("status = %s\n", gsl_strerror (status));
-
-	gsl_multiroot_fsolver_free (s);
-	gsl_vector_free (x);
 }
 
 
 // solve the ODE with the correct params (that we got from findRoots())
-void solveAndSaveData(double* params){
+void solveAndSaveData(double roots[2], double params[3]){
 	FILE* dataFile = fopen("data/phi.dat", "w");
 	
-	const double energy = params[0];
-	const double z = params[1];
+	const double energy = roots[0];
+	const double z = roots[1];
 
-	double constants[2] = {1, energy} ; //(temporary values) params[0] = 2m/hbar²	params[1] = E
+	double constants[2] = {params[2], energy} ; //(temporary values) constants[0] = 2m/hbar^2	constants[1] = E
 	gsl_odeiv2_system sys = {func, NULL, 3, &constants}; // we initialize the ODE system
-	double x = 0.0, l = 10.0; // we set the bounds
+	double x = 0.0, l = params[0]; // we set the bounds
 
-	gsl_odeiv2_driver * driver = gsl_odeiv2_driver_alloc_y_new (&sys, gsl_odeiv2_step_rkf45, 1e-6, 1e-6, 0.0); 
+	gsl_odeiv2_driver * driver = gsl_odeiv2_driver_alloc_y_new (&sys, gsl_odeiv2_step_rkf45, 1e-6, 1e-6, 0.0);
 
-	double y[3] = {0 , z, 0}; //(y0,y1,y2)(t=0) = (0,z,0)
+	double y[3] = {0, z, 0}; //(y0,y1,y2)(t=0) = (0,z,0)
 	fprintf(dataFile, "x phi(x)\n");
 	fprintf(dataFile, "%lf %lf\n", x, y[0]);
 	//We get the values of (y0,y1,y2)
@@ -190,16 +155,16 @@ void solveAndSaveData(double* params){
 	fclose(dataFile);
 }
 
-void drawPotential(){
+void drawPotential(double l){
 	FILE* dataFile = fopen("data/potential.dat", "w");
 	fprintf(dataFile, "x V(x)\n");
-	for(double x=0; x<=L; x++){
+	for(double x=0; x<=l; x++){
 		fprintf(dataFile, "%lf %lf\n", x, getPotential(x));
 	}
 	fclose(dataFile);
 }
 
-int main(){
+void solveSchrodinger(double params[3]){
 	double roots[2]={0,0};
 	FILE* dataFile = fopen("data/phiALL.dat", "w");fclose(dataFile);
 	/*
@@ -209,9 +174,46 @@ int main(){
 	
 	printf("What case do you want to view\n0: V(x)=0 everywhere\n1: V(x) is a step\n2: V(x) is rectangular\n: "); scanf("%d", &(potential.type));
 	*/
-	findRoots(roots);
-	solveAndSaveData(roots);
-	drawPotential();
+	findRoots(roots, params);
+	printf("ROOTS: %lf | %lf\n", roots[0], roots[1]);
+	solveAndSaveData(roots, params);
+	drawPotential(params[0]);
+}
+
+int main(){
+	/*
+	We choose those units to get values near to 1 :
+	length = 1e-9 m = 1 nm
+	energy = 1.6e-19 J = 1 eV
+	mass:
+		energy: 1 J = (1/1.6) * 1e19 eV
+		length: 1 m = 1e9 nm => m^-2 = 1e-18 nm^-2
+		time: 1 s = 1e15 fs => (1s)^2 = 1e30 fs^2		(fs = "femtosecond")
+
+		=> J.m^-2.s^2 = (1/1.6) * 10 eV.nm^-2.s^2
+
+		and a mass (kg) is homogeneous to E/c² (J.s²/m²) so we have:
+		9,109 × 10−31
+		=> m	= 1e-30 kg	= 1e-30 * (1/1.6) * 10 eV.nm^-2.s^2
+				= (1/1.6) * 1e-29 eV.nm^-2.s^2
+				= (1/1.6) * 10 eV.nm^-2.fs^2
+				= 6.25 eV.nm^-2.fs^2
+
+	hbar 	= 1.05e-34 J.s 
+			= 1.05e-34 * (1/1.6) * 1e19 * 1e15 eV.fs
+			= 0,65625 * 1e(-34+19+15)
+			= 0,65625
+	*/
+	double m = 6.25;
+	double l = 1.0;
+	double energy = 0.34; // according to the formula : En = h^2 * n^2 / (8*m*l^2)
+	double hbar = 0.65625;
+	double alpha = 2*m / (hbar*hbar); // we have (d^2)(phi(x))/d(x^2) + alpha phi(x) = 0
+
+	double params[3] = {l, energy, alpha};
+
+	solveSchrodinger(params);
+
 
 	return 0;
 }
