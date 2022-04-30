@@ -1,6 +1,0 @@
-{
-    "files.associations": {
-        "gsl_multiroots.h": "c",
-        "gsl_roots.h": "c"
-    }
-}

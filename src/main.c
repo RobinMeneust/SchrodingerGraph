@@ -155,7 +155,7 @@ double findRoot(schrodingerParameters params){
 			best_z_approx=z;
 		}
 		iter++;
-	}while(eps>1e-8 && iter<1000);
+	}while(eps>1e-8 && iter<5000);
 	
 	return best_z_approx;
 }
@@ -256,7 +256,7 @@ int main(){
 	double m = 6.25;
 	double l = 1.0;
 	double hbar = 0.65625;
-	double energy = hbar*hbar*4*M_PI*M_PI / (8*m*l*l); // ~=0.34 according to the formula : En = h^2 * n^2 / (8*m*l^2)
+	double energy = hbar*hbar*4*M_PI*M_PI / (8*m*l*l); // ~=0.34 according to the formula : En = h^2 * n^2 / (8*m*l^2) 		So to get the n-th energy level we can just multiply by n^2 this value
 	double alpha = 2*m / (hbar*hbar); // we have (d^2)(phi(x))/d(x^2) + alpha phi(x) = 0
 
 	potentialParams potential;
