@@ -63,7 +63,7 @@ int func (double x, const double y[], double f[] /* = dydt*/, void *params){
 // get an approximation of the values of the function phi(x) in the equation, to find the root
 int functionForRoot(double z, double params[3], double f[2])
 {
-	double constants[2] = {params[2], params[1]} ; //(temporary values) constants[0] = 2m/hbar²	constants[1] = E
+	double constants[2] = {params[2], params[1]} ; // constants[0] = 2m/hbar²	constants[1] = E
 	gsl_odeiv2_system sys = {func, NULL, 3, &constants}; // we initialize the ODE system
 	double x = 0.0, l = params[0]; // we set the bounds
 
@@ -72,8 +72,8 @@ int functionForRoot(double z, double params[3], double f[2])
 	double y[3] = {0, z, 0}; //(y0,y1,y2)(t=0) = (0,z,0) if V(x)=0 everywhere for example
 	
 	//We get the values of (y0,y1,y2)
-	FILE* dataFile = fopen("data/phiALL.dat", "a"); // USED FOR TESTING
-	fprintf(dataFile, "%lf %lf\n", x, y[0]);
+	//FILE* dataFile = fopen("data/phiALL.dat", "a"); // USED FOR TESTING
+	//fprintf(dataFile, "%lf %lf\n", x, y[0]);
 	for (int i = 1; i <= N_POINTS; i++)
 	{
 		double xi = i * l / (double)N_POINTS;
@@ -84,10 +84,10 @@ int functionForRoot(double z, double params[3], double f[2])
 			break;
 		}
 		if(y[0]<100 && y[0]>-100 && x<100 && x>-100){
-			fprintf(dataFile, "%lf %lf\n", x, y[0]);
+			//fprintf(dataFile, "%lf %lf\n", x, y[0]);
 		}
 	}
-	fclose(dataFile);
+	//fclose(dataFile);
 	f[0]=y[0]; //y0(L)
 	f[1]=y[2]-1; //y3(L)-1
 
@@ -109,25 +109,38 @@ int print_state (size_t iter, gsl_multiroot_fsolver * s)
 	);
 }
 */
-// Find the roots, the shooting method
-void findRoots(double* roots, double params[3]){
+// Find the root with the shooting method
+double findRoot(double params[3]){
 	double y[2]={0.0, 0.0};
-	for(double z=-10.0; z<10.0; z+=1){
+	double step=0.01;
+	double z=0.0-step;
+	double eps=1.0;
+	int iter=0;
+	double best_z_approx=z;
+	double eps_min=eps;
+
+	do{
+		z+=step;
 		functionForRoot(z, params, y);
-		if(fabs(y[0])<0.4 && fabs(y[1])<0.4)
-			printf("y0(L)= %lf | y3(L)-1 = %lf\n", y[0], y[1]);
-	}
+		//if(fabs(y[0])<0.1 && fabs(y[1])<0.1)
+		//	printf("y0(L)= %lf | y3(L)-1 = %lf\n", y[0], y[1]);
+		eps=fabs(y[1]);
+		if(eps<eps_min){
+			eps_min=eps;
+			best_z_approx=z;
+		}
+		iter++;
+	}while(eps>0.1 && iter<1000);
+	
+	return best_z_approx;
 }
 
 
 // solve the ODE with the correct params (that we got from findRoots())
-void solveAndSaveData(double roots[2], double params[3]){
+void solveAndSaveData(double z, double params[3]){
 	FILE* dataFile = fopen("data/phi.dat", "w");
 	
-	const double energy = roots[0];
-	const double z = roots[1];
-
-	double constants[2] = {params[2], energy} ; //(temporary values) constants[0] = 2m/hbar^2	constants[1] = E
+	double constants[2] = {params[2], params[1]} ; // constants[0] = 2m/hbar^2	constants[1] = E
 	gsl_odeiv2_system sys = {func, NULL, 3, &constants}; // we initialize the ODE system
 	double x = 0.0, l = params[0]; // we set the bounds
 
@@ -165,7 +178,7 @@ void drawPotential(double l){
 }
 
 void solveSchrodinger(double params[3]){
-	double roots[2]={0,0};
+	double z=0.0;
 	FILE* dataFile = fopen("data/phiALL.dat", "w");fclose(dataFile);
 	/*
 	potentialParams potential;
@@ -174,9 +187,8 @@ void solveSchrodinger(double params[3]){
 	
 	printf("What case do you want to view\n0: V(x)=0 everywhere\n1: V(x) is a step\n2: V(x) is rectangular\n: "); scanf("%d", &(potential.type));
 	*/
-	findRoots(roots, params);
-	printf("ROOTS: %lf | %lf\n", roots[0], roots[1]);
-	solveAndSaveData(roots, params);
+	z=findRoot(params);
+	solveAndSaveData(z, params);
 	drawPotential(params[0]);
 }
 
@@ -206,8 +218,8 @@ int main(){
 	*/
 	double m = 6.25;
 	double l = 1.0;
-	double energy = 0.34; // according to the formula : En = h^2 * n^2 / (8*m*l^2)
 	double hbar = 0.65625;
+	double energy = hbar*hbar*4*M_PI*M_PI / (8*m*l*l); // ~=0.34 according to the formula : En = h^2 * n^2 / (8*m*l^2)
 	double alpha = 2*m / (hbar*hbar); // we have (d^2)(phi(x))/d(x^2) + alpha phi(x) = 0
 
 	double params[3] = {l, energy, alpha};

@@ -134,4 +134,4 @@ gnuplot_instructionsALL="'data/phiALL.dat' u 1:2 title 'phi(x)' $line_style lc r
 
 # We create the graphs
 gnuplot -e "reset; set terminal jpeg size 1600, 900; set ylabel 'phi'; set xlabel 'x'; set output 'graphs/schrodingerGraph.jpg'; plot $gnuplot_instructions"
-gnuplot -e "reset; set terminal jpeg size 1600, 900; set ylabel 'phi'; set xlabel 'x'; set output 'graphs/schrodingerGraphALL.jpg'; plot $gnuplot_instructionsALL"
+#gnuplot -e "reset; set terminal jpeg size 1600, 900; set ylabel 'phi'; set xlabel 'x'; set output 'graphs/schrodingerGraphALL.jpg'; plot $gnuplot_instructionsALL"
