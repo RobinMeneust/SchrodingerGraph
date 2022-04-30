@@ -8,10 +8,20 @@
 
 #define N_POINTS 100 //number of points
 
+
 typedef struct potentialParams{
 	int type;
-	double value;
+	double v0;
+	double a;
+	double b;
 }potentialParams;
+
+typedef struct schrodingerParameters{
+	potentialParams potential;
+	double energy;
+	double bound;
+	double alpha;
+}schrodingerParameters;
 
 /*
 	
@@ -31,28 +41,44 @@ d(phi)/dx - alpha * phi = 0
 
 
 // It will change between the 3 cases that we will see here (rectangular, null...)
-double getPotential(double x){
-	return 0;
+double getPotential(double x, potentialParams potential){
+	switch(potential.type){
+		case 0: 	// V=0
+			return 0;
+		case 1:		// step potential
+			if(x<potential.a){
+				return 0;
+			}
+			else{
+				return potential.v0;
+			}
+		case 2:		// rectangular potential
+			if(x<potential.a || x>potential.b){
+				return 0;
+			}
+			else{
+				return potential.v0;
+			}
+		default:
+			fprintf(stderr, "ERROR : in getPotential(), parameters are incorrect");
+			exit(EXIT_FAILURE);
+	}
+
 	/*
-	if(x>5){
-		...
-	}
-	else{
-		...
-	}
+	
 	*/
 }
 
 
-// Calculate alpha which is in the equation of Schrodinger : phi'' + alpha*phi = 0
-double getConstantFromParams(double x, double* params)
+// Calculate the coefficient of phi (C) which is in the equation of Schrodinger : phi'' + C*phi = 0
+double getCoefficientFromParams(double x, schrodingerParameters params)
 {
-	return params[0]*(params[1]-getPotential(x));
+	return params.alpha*(params.energy-getPotential(x, params.potential));
 }
 
 // calculate f(y0,y1,y2)
 int func (double x, const double y[], double f[] /* = dydt*/, void *params){
-	double alpha = getConstantFromParams(x, (double*) params);
+	double alpha = getCoefficientFromParams(x, *(schrodingerParameters*) params);
 	f[0]=y[1];
 	f[1]=(-1.0)*alpha*y[0];
 	f[2]=y[0]*y[0];
@@ -61,11 +87,10 @@ int func (double x, const double y[], double f[] /* = dydt*/, void *params){
 }
 
 // get an approximation of the values of the function phi(x) in the equation, to find the root
-int functionForRoot(double z, double params[3], double f[2])
+int functionForRoot(double z, schrodingerParameters params, double f[2])
 {
-	double constants[2] = {params[2], params[1]} ; // constants[0] = 2m/hbar²	constants[1] = E
-	gsl_odeiv2_system sys = {func, NULL, 3, &constants}; // we initialize the ODE system
-	double x = 0.0, l = params[0]; // we set the bounds
+	gsl_odeiv2_system sys = {func, NULL, 3, &params}; // we initialize the ODE system
+	double x = 0.0, l = params.bound; // we set the bounds
 
 	gsl_odeiv2_driver * driver = gsl_odeiv2_driver_alloc_y_new (&sys, gsl_odeiv2_step_rkf45, 1e-6, 1e-6, 0.0); 
 
@@ -110,7 +135,7 @@ int print_state (size_t iter, gsl_multiroot_fsolver * s)
 }
 */
 // Find the root with the shooting method
-double findRoot(double params[3]){
+double findRoot(schrodingerParameters params){
 	double y[2]={0.0, 0.0};
 	double step=0.01;
 	double z=0.0-step;
@@ -130,19 +155,18 @@ double findRoot(double params[3]){
 			best_z_approx=z;
 		}
 		iter++;
-	}while(eps>0.1 && iter<1000);
+	}while(eps>1e-8 && iter<1000);
 	
 	return best_z_approx;
 }
 
 
 // solve the ODE with the correct params (that we got from findRoots())
-void solveAndSaveData(double z, double params[3]){
+void solveAndSaveData(double z, schrodingerParameters params){
 	FILE* dataFile = fopen("data/phi.dat", "w");
 	
-	double constants[2] = {params[2], params[1]} ; // constants[0] = 2m/hbar^2	constants[1] = E
-	gsl_odeiv2_system sys = {func, NULL, 3, &constants}; // we initialize the ODE system
-	double x = 0.0, l = params[0]; // we set the bounds
+	gsl_odeiv2_system sys = {func, NULL, 3, &params}; // we initialize the ODE system
+	double x = 0.0, l = params.bound; // we set the bounds
 
 	gsl_odeiv2_driver * driver = gsl_odeiv2_driver_alloc_y_new (&sys, gsl_odeiv2_step_rkf45, 1e-6, 1e-6, 0.0);
 
@@ -168,28 +192,41 @@ void solveAndSaveData(double z, double params[3]){
 	fclose(dataFile);
 }
 
-void drawPotential(double l){
+void drawPotential(schrodingerParameters params){
 	FILE* dataFile = fopen("data/potential.dat", "w");
 	fprintf(dataFile, "x V(x)\n");
-	for(double x=0; x<=l; x++){
-		fprintf(dataFile, "%lf %lf\n", x, getPotential(x));
+	double step=0.0;
+	if(params.potential.type==0){ // because there is only one value so 2 points are enough to draw the line
+		step=params.bound/2;
+	}
+	else{
+		step=params.bound/10;
+	}
+
+	double potentialX=0.0;
+	double prev_potentialX=0.0;
+	for(double x=0.0; x<=params.bound; x+=step){
+		potentialX = getPotential(x, params.potential);
+		printf("V(%lf) = %lf | prev = %lf \n", x, potentialX, prev_potentialX);
+		// to get a vertical line and not a leaning wall
+		if(prev_potentialX<potentialX){
+			fprintf(dataFile, "%lf %lf\n", x, 0.0);
+		}
+		else if(prev_potentialX>potentialX){
+			fprintf(dataFile, "%lf %lf\n", x, prev_potentialX);
+		}
+		fprintf(dataFile, "%lf %lf\n", x, potentialX);
+		prev_potentialX=potentialX;
 	}
 	fclose(dataFile);
 }
 
-void solveSchrodinger(double params[3]){
+void solveSchrodinger(schrodingerParameters params){
 	double z=0.0;
-	FILE* dataFile = fopen("data/phiALL.dat", "w");fclose(dataFile);
-	/*
-	potentialParams potential;
-	potential.type=0;
-	potential.value=1; //temporary value
 	
-	printf("What case do you want to view\n0: V(x)=0 everywhere\n1: V(x) is a step\n2: V(x) is rectangular\n: "); scanf("%d", &(potential.type));
-	*/
 	z=findRoot(params);
 	solveAndSaveData(z, params);
-	drawPotential(params[0]);
+	drawPotential(params);
 }
 
 int main(){
@@ -222,8 +259,24 @@ int main(){
 	double energy = hbar*hbar*4*M_PI*M_PI / (8*m*l*l); // ~=0.34 according to the formula : En = h^2 * n^2 / (8*m*l^2)
 	double alpha = 2*m / (hbar*hbar); // we have (d^2)(phi(x))/d(x^2) + alpha phi(x) = 0
 
-	double params[3] = {l, energy, alpha};
+	potentialParams potential;
+	potential.type=0;
+	potential.v0=1.0;
+	
+	printf("What case do you want to view\n0: V(x)=0 everywhere\n1: V(x) is a step\n2: V(x) is rectangular\nANSWER: "); scanf("%d", &(potential.type));
+	if(potential.type!=0){ // if V(x) != 0 for all x
+		printf("Give the value of the potential in the well when it's not null: V0 = "); scanf("%lf", &(potential.v0));
+		potential.a = 0.4;
+		potential.b = 0.6;
+	}
 
+	schrodingerParameters params;
+	params.potential=potential;
+	params.energy=energy;
+	params.bound=l;
+	params.alpha=alpha;
+	
+	//FILE* dataFile = fopen("data/phiALL.dat", "w");fclose(dataFile);
 	solveSchrodinger(params);
 
 
