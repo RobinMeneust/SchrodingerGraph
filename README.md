@@ -3,12 +3,13 @@
 Project written in C and bash
 Solves the time independent Schrodinger equation for 3 different potential cases:
   - V = 0
-  ``math
-  V(x) = \begin{cases}
+    <img src="https://render.githubusercontent.com/render/math?math=V(x) = \begin{cases}
   \infty &\text{if } x \leq 0 \\
   0 &\text{if } x \in \lbrack 0;L \rbrack  \\
   \infty &\text{if } x \geq L \\
-  \end{cases}
+  \end{cases}">
+  ``math
+  
   ``
   - V is rectangular
   ``math
