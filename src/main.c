@@ -182,6 +182,106 @@ double findRoot(schrodingerParameters params){
 	return best_z_approx;
 }
 
+double solveODEMultipleDomains(const gsl_vector* input, void* params){
+	schrodingerParameters parameters = *(schrodingerParameters*) params;
+	double y1[3]={0.0};
+	double y2[3]={0.0};
+	double y3[3]={0.0};
+
+	if(parameters.potential.type==2){
+		parameters.currentDomain = 0;
+		solveODE(gsl_vector_get(input, 0), parameters, y1);
+
+		parameters.prevDomainY0=y1[0];
+		parameters.prevDomainY2=y1[2];
+		parameters.currentDomain = 1;
+		solveODE(gsl_vector_get(input, 1), parameters, y2);
+
+		parameters.prevDomainY0=y2[0];
+		parameters.prevDomainY2=y2[2];
+		parameters.currentDomain = 2;
+		solveODE(gsl_vector_get(input, 2), parameters, y3);
+
+		parameters.currentDomain = 0;
+		//if(fabs(y[0])<0.1 && fabs(y[1])<0.1)
+		//	printf("y0(L)= %lf | y3(L)-1 = %lf\n", y[0], y[1]);
+		return fabs(y1[1])+fabs(y2[1])+fabs(y3[1]);		
+	}
+	else{
+		fprintf(stderr, "ERROR: not yet implemented\n");
+		exit(EXIT_FAILURE);
+	}
+}
+
+
+int findMultipleRoots(schrodingerParameters params, double roots[3]){
+	// Position of the minimum (1,2), scale factors 10,20, height 30.
+	double par[5] = {1.0, 2.0, 10.0, 20.0, 30.0};
+
+	const gsl_multimin_fminimizer_type *T =	gsl_multimin_fminimizer_nmsimplex2;
+	gsl_multimin_fminimizer *s = NULL;
+	gsl_vector *ss, *x;
+	gsl_multimin_function minex_func;
+
+	size_t iter = 0;
+	int status;
+	double size;
+
+	/* Starting point */
+	x = gsl_vector_alloc (3); // z0, z1, z2
+	gsl_vector_set (x, 0, 5.0);
+	gsl_vector_set (x, 1, 7.0);
+	gsl_vector_set (x, 2, 7.0);
+
+	/* Set initial step sizes to 1 */
+	ss = gsl_vector_alloc (3);
+	gsl_vector_set_all (ss, 1.0);
+
+	/* Initialize method and iterate */
+	minex_func.n = 3;
+	minex_func.f = solveODEMultipleDomains;
+	minex_func.params = &params;
+
+	s = gsl_multimin_fminimizer_alloc (T, 3);
+	gsl_multimin_fminimizer_set (s, &minex_func, x, ss);
+
+	do
+	{
+		iter++;
+		status = gsl_multimin_fminimizer_iterate(s);
+
+		if (status)
+		break;
+
+		size = gsl_multimin_fminimizer_size (s);
+		status = gsl_multimin_test_size (size, 1e-8);
+
+		if (status == GSL_SUCCESS)
+		{
+			printf ("converged to minimum at\n");
+		}
+
+		printf ("%5lu %10.3e %10.3e %10.3e f() = %7.3f size = %10.3e\n", iter, gsl_vector_get (s->x, 0), gsl_vector_get (s->x, 1), gsl_vector_get (s->x, 1), s->fval, size);
+	}while (status == GSL_CONTINUE && iter < 10000);
+
+	if(status==GSL_SUCCESS){
+		roots[0]=gsl_vector_get (s->x, 0);
+		roots[1]=gsl_vector_get (s->x, 1);
+		roots[2]=gsl_vector_get (s->x, 2);
+	}
+	else{
+		fprintf(stderr, "ERROR: findMultipleRoots() could not find any roots\n");
+		exit(EXIT_FAILURE);
+	}
+
+	gsl_vector_free(x);
+	gsl_vector_free(ss);
+	gsl_multimin_fminimizer_free (s);
+
+	return status;
+}
+
+/*
 void findMultipleRoots(schrodingerParameters params, double roots[3]){
 	schrodingerParameters paramsSubdivided=params; // params for one of the 3 domains ([0,a] [a,b] [b,L])
 	double y1[2]={0.0, 0.0}; // Y(a) in 1st domain
@@ -240,6 +340,7 @@ void findMultipleRoots(schrodingerParameters params, double roots[3]){
 	}
 	printf("ROOTS %lf %lf %lf | ACCURACY %lf\n", roots[0], roots[1], roots[2], eps_min);
 }
+*/
 
 void drawPotential(schrodingerParameters params){
 	FILE* dataFile = fopen("data/potential.dat", "w");
@@ -332,7 +433,7 @@ int main(){
 	double m = 6.25;
 	double l = 1.0;
 	double hbar = 0.65625;
-	double energy = hbar*hbar*4*M_PI*M_PI / (8*m*l*l); // ~=0.34 according to the formula : En = h^2 * n^2 / (8*m*l^2) 		So to get the n-th energy level we can just multiply by n^2 this value
+	double energy = 9*hbar*hbar*4*M_PI*M_PI / (8*m*l*l); // ~=0.34 according to the formula : En = h^2 * n^2 / (8*m*l^2) 		So to get the n-th energy level we can just multiply by n^2 this value
 	double alpha = 2*m / (hbar*hbar); // we have (d^2)(phi(x))/d(x^2) + alpha phi(x) = 0
 	potentialParams potential;
 	schrodingerParameters params;
