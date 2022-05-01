@@ -2,7 +2,7 @@ HEAD = $(wildcard ./include/*.h)
 SRC = $(wildcard src/*.c)
 OBJ = $(patsubst src/%.c, obj/%.o, $(SRC))
 CC = gcc 
-PROG=./bin/test_gsl
+PROG=./bin/schrodingerSolver
 
 all: $(PROG) 
 

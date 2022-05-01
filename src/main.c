@@ -21,6 +21,7 @@ typedef struct schrodingerParameters{
 	double energy;
 	double bound;
 	double alpha;
+	int doDraw; // is equal to 0 if we don't want to draw phi(x) on the graph
 }schrodingerParameters;
 
 /*
@@ -86,19 +87,24 @@ int func (double x, const double y[], double f[] /* = dydt*/, void *params){
 	return GSL_SUCCESS;
 }
 
-// get an approximation of the values of the function phi(x) in the equation, to find the root
-int functionForRoot(double z, schrodingerParameters params, double f[2])
-{
+// solve the ODE with the giveen parameters to get the function phi(x), and draw it if params.doDraw!=0
+
+int solveODE(double z, schrodingerParameters params, double f[2]){
+	FILE* dataFile=NULL;
+	if(params.doDraw)
+		dataFile = fopen("data/phi.dat", "w");
+	
 	gsl_odeiv2_system sys = {func, NULL, 3, &params}; // we initialize the ODE system
 	double x = 0.0, l = params.bound; // we set the bounds
 
-	gsl_odeiv2_driver * driver = gsl_odeiv2_driver_alloc_y_new (&sys, gsl_odeiv2_step_rkf45, 1e-6, 1e-6, 0.0); 
+	gsl_odeiv2_driver * driver = gsl_odeiv2_driver_alloc_y_new (&sys, gsl_odeiv2_step_rkf45, 1e-6, 1e-6, 0.0);
 
-	double y[3] = {0, z, 0}; //(y0,y1,y2)(t=0) = (0,z,0) if V(x)=0 everywhere for example
-	
+	double y[3] = {0, z, 0}; //(y0,y1,y2)(t=0) = (0,z,0)
+	if(params.doDraw){
+		fprintf(dataFile, "x phi(x)\n");
+		fprintf(dataFile, "%lf %lf\n", x, y[0]);
+	}
 	//We get the values of (y0,y1,y2)
-	//FILE* dataFile = fopen("data/phiALL.dat", "a"); // USED FOR TESTING
-	//fprintf(dataFile, "%lf %lf\n", x, y[0]);
 	for (int i = 1; i <= N_POINTS; i++)
 	{
 		double xi = i * l / (double)N_POINTS;
@@ -108,16 +114,20 @@ int functionForRoot(double z, schrodingerParameters params, double f[2])
 			printf ("error, return value=%d\n", status);
 			break;
 		}
-		if(y[0]<100 && y[0]>-100 && x<100 && x>-100){
-			//fprintf(dataFile, "%lf %lf\n", x, y[0]);
-		}
+		//printf("f(%.2lf)=%lf\n", x, y[0]);
+		if(params.doDraw)
+			fprintf(dataFile, "%lf %lf\n", x, y[0]);
 	}
-	//fclose(dataFile);
-	f[0]=y[0]; //y0(L)
-	f[1]=y[2]-1; //y3(L)-1
+
+	if(f!=NULL){
+		f[0]=y[0]; //y0(L)
+		f[1]=y[2]-1; //y3(L)-1
+	}
 
 	gsl_odeiv2_driver_free (driver);
-
+	if(params.doDraw)
+		fclose(dataFile);
+	
 	return GSL_SUCCESS;
 }
 
@@ -146,7 +156,7 @@ double findRoot(schrodingerParameters params){
 
 	do{
 		z+=step;
-		functionForRoot(z, params, y);
+		solveODE(z, params, y);
 		//if(fabs(y[0])<0.1 && fabs(y[1])<0.1)
 		//	printf("y0(L)= %lf | y3(L)-1 = %lf\n", y[0], y[1]);
 		eps=fabs(y[1]);
@@ -162,35 +172,7 @@ double findRoot(schrodingerParameters params){
 
 
 // solve the ODE with the correct params (that we got from findRoots())
-void solveAndSaveData(double z, schrodingerParameters params){
-	FILE* dataFile = fopen("data/phi.dat", "w");
-	
-	gsl_odeiv2_system sys = {func, NULL, 3, &params}; // we initialize the ODE system
-	double x = 0.0, l = params.bound; // we set the bounds
 
-	gsl_odeiv2_driver * driver = gsl_odeiv2_driver_alloc_y_new (&sys, gsl_odeiv2_step_rkf45, 1e-6, 1e-6, 0.0);
-
-	double y[3] = {0, z, 0}; //(y0,y1,y2)(t=0) = (0,z,0)
-	fprintf(dataFile, "x phi(x)\n");
-	fprintf(dataFile, "%lf %lf\n", x, y[0]);
-	//We get the values of (y0,y1,y2)
-	for (int i = 1; i <= N_POINTS; i++)
-	{
-		double xi = i * l / (double)N_POINTS;
-		int status = gsl_odeiv2_driver_apply (driver, &x, xi, y);
-		if (status != GSL_SUCCESS)
-		{
-			printf ("error, return value=%d\n", status);
-			break;
-		}
-		//printf("f(%.2lf)=%lf\n", x, y[0]);
-		fprintf(dataFile, "%lf %lf\n", x, y[0]);
-	}
-
-	gsl_odeiv2_driver_free (driver);
-
-	fclose(dataFile);
-}
 
 void drawPotential(schrodingerParameters params){
 	FILE* dataFile = fopen("data/potential.dat", "w");
@@ -207,7 +189,6 @@ void drawPotential(schrodingerParameters params){
 	double prev_potentialX=0.0;
 	for(double x=0.0; x<=params.bound; x+=step){
 		potentialX = getPotential(x, params.potential);
-		printf("V(%lf) = %lf | prev = %lf \n", x, potentialX, prev_potentialX);
 		// to get a vertical line and not a leaning wall
 		if(prev_potentialX<potentialX){
 			fprintf(dataFile, "%lf %lf\n", x, 0.0);
@@ -225,7 +206,10 @@ void solveSchrodinger(schrodingerParameters params){
 	double z=0.0;
 	
 	z=findRoot(params);
-	solveAndSaveData(z, params);
+	params.doDraw=1;
+	if(solveODE(z, params, NULL) == GSL_SUCCESS)
+		printf("SUCCESS: the equation was solved\n");
+	
 	drawPotential(params);
 }
 
@@ -275,6 +259,7 @@ int main(){
 	params.energy=energy;
 	params.bound=l;
 	params.alpha=alpha;
+	params.doDraw=0;
 	
 	//FILE* dataFile = fopen("data/phiALL.dat", "w");fclose(dataFile);
 	solveSchrodinger(params);
