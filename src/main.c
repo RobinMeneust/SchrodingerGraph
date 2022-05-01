@@ -5,6 +5,7 @@
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_odeiv2.h>
 #include <gsl/gsl_multiroots.h>
+#include <gsl/gsl_multimin.h>
 
 #define N_POINTS 100 //number of points
 
@@ -12,16 +13,19 @@
 typedef struct potentialParams{
 	int type;
 	double v0;
-	double a;
-	double b;
+	double a; // first point after 0, it's the upper bound of the 1st domain (where V=0);
+	double b; // second point, it's the interface between the 2nd and 3rd domains (respectively where V=V0 and V=0)
 }potentialParams;
 
 typedef struct schrodingerParameters{
 	potentialParams potential;
 	double energy;
-	double bound;
+	double bound; // third point, it's the upper bound of the 3d domain (after that point V=infinity)
 	double alpha;
 	int doDraw; // is equal to 0 if we don't want to draw phi(x) on the graph
+	int currentDomain; // used to know in which domain we are to solve the ODE
+	double prevDomainY0; // phi(x) at the right bound of the previous domain
+	double prevDomainY2; // N(x) at the right bound of the previous domain
 }schrodingerParameters;
 
 /*
@@ -61,13 +65,9 @@ double getPotential(double x, potentialParams potential){
 				return potential.v0;
 			}
 		default:
-			fprintf(stderr, "ERROR : in getPotential(), parameters are incorrect");
+			fprintf(stderr, "ERROR : in getPotential(), parameters are incorrect\n");
 			exit(EXIT_FAILURE);
 	}
-
-	/*
-	
-	*/
 }
 
 
@@ -91,30 +91,55 @@ int func (double x, const double y[], double f[] /* = dydt*/, void *params){
 
 int solveODE(double z, schrodingerParameters params, double f[2]){
 	FILE* dataFile=NULL;
+	double x=0.0;
+	double length=params.bound;
+	double y1_ini=0.0, y3_ini=0.0; // phi(0)=0 and N(0)=0
+
 	if(params.doDraw)
-		dataFile = fopen("data/phi.dat", "w");
+		dataFile = fopen("data/phi.dat", "a");
 	
 	gsl_odeiv2_system sys = {func, NULL, 3, &params}; // we initialize the ODE system
-	double x = 0.0, l = params.bound; // we set the bounds
+	// we set the bounds
+	if(params.potential.type!=0 && params.currentDomain==0){
+		x = 0.0;
+		length=params.potential.a-x;
+	}
+	else if(params.currentDomain==1){
+		x = params.potential.a;
+		length=params.potential.b-x;
+		y1_ini=params.prevDomainY0;
+		y3_ini=params.prevDomainY2;
+	}
+	else if(params.currentDomain==2){
+		x = params.potential.b;
+		length=params.bound-x;
+		y1_ini=params.prevDomainY0;
+		y3_ini=params.prevDomainY2;
+	}
 
 	gsl_odeiv2_driver * driver = gsl_odeiv2_driver_alloc_y_new (&sys, gsl_odeiv2_step_rkf45, 1e-6, 1e-6, 0.0);
 
-	double y[3] = {0, z, 0}; //(y0,y1,y2)(t=0) = (0,z,0)
+	double y[3] = {y1_ini, z, y3_ini}; //(y0,y1,y2)(x_ini) = (0,z,0)
 	if(params.doDraw){
-		fprintf(dataFile, "x phi(x)\n");
 		fprintf(dataFile, "%lf %lf\n", x, y[0]);
 	}
 	//We get the values of (y0,y1,y2)
+	double xi=x;
+
 	for (int i = 1; i <= N_POINTS; i++)
 	{
-		double xi = i * l / (double)N_POINTS;
-		int status = gsl_odeiv2_driver_apply (driver, &x, xi, y);
+		xi += length / (double)N_POINTS;
+		//printf("xi : %lf\n", xi);
+		//if(xi>0.35)
+		//	sleep(1);
+		int status = gsl_odeiv2_driver_apply(driver, &x, xi, y);
 		if (status != GSL_SUCCESS)
 		{
 			printf ("error, return value=%d\n", status);
 			break;
 		}
 		//printf("f(%.2lf)=%lf\n", x, y[0]);
+		//printf("Z=%lf | Y(%lf) = %lf %lf %lf\n", z, x, y[0], y[1], y[2]);
 		if(params.doDraw)
 			fprintf(dataFile, "%lf %lf\n", x, y[0]);
 	}
@@ -131,19 +156,6 @@ int solveODE(double z, schrodingerParameters params, double f[2]){
 	return GSL_SUCCESS;
 }
 
-//FOR DEBUG
-/*
-int print_state (size_t iter, gsl_multiroot_fsolver * s)
-{
-	printf ("iter = %3lu x = % .3f % .3f | f(x) = % .3e % .3e\n", 
-		iter,
-		gsl_vector_get (s->x, 0),
-		gsl_vector_get (s->x, 1),
-		gsl_vector_get (s->f, 0),
-		gsl_vector_get (s->f, 1)
-	);
-}
-*/
 // Find the root with the shooting method
 double findRoot(schrodingerParameters params){
 	double y[2]={0.0, 0.0};
@@ -170,9 +182,64 @@ double findRoot(schrodingerParameters params){
 	return best_z_approx;
 }
 
+void findMultipleRoots(schrodingerParameters params, double roots[3]){
+	schrodingerParameters paramsSubdivided=params; // params for one of the 3 domains ([0,a] [a,b] [b,L])
+	double y1[2]={0.0, 0.0}; // Y(a) in 1st domain
+	double y2[2]={0.0, 0.0}; // Y(b) in 2nd domain
+	double y3[2]={0.0, 0.0}; // Y(L) in 3rd domain
 
-// solve the ODE with the correct params (that we got from findRoots())
+	double step=0.01;
+	double z[3]={0.0, 0.0, 0.0};
+	double eps=3.0;
+	int iter=0;
+	int max_iter=10000;
+	double eps_min=eps;
+	if(params.potential.type==2){
+		do{
+			z[0]+=step;
+			do{
+				z[1]+=step;
+				do{
+					z[2]+=step;
+					//printf("Z %lf %lf %lf\n", z[0], z[1], z[2]);
+					params.currentDomain = 0;
+					solveODE(z[0], params, y1);
 
+					params.prevDomainY0=y1[0];
+					params.prevDomainY2=y1[2];
+					params.currentDomain = 1;
+					solveODE(z[1], params, y2);
+
+					params.prevDomainY0=y2[0];
+					params.prevDomainY2=y2[2];
+					params.currentDomain = 2;
+					solveODE(z[2], params, y3);
+
+					params.currentDomain = 0;
+					//if(fabs(y[0])<0.1 && fabs(y[1])<0.1)
+					//	printf("y0(L)= %lf | y3(L)-1 = %lf\n", y[0], y[1]);
+					eps=fabs(y1[1])+fabs(y2[1])+fabs(y3[1]);
+					if(eps<eps_min){
+						//printf("iter %d | Z=%lf %lf %lf | EPS %lf\n", iter, z[0], z[1], z[2], eps);
+						eps_min=eps;
+						roots[0]=z[0];
+						roots[1]=z[1];
+						roots[2]=z[2];
+					}
+					iter++;
+				}while(z[2]<5.0 && iter<max_iter);
+				z[2]=0;
+			}while(z[1]<5.0  && iter<max_iter);
+			z[1]=0;
+		}while(eps>1e-8 && iter<max_iter);
+		printf("iter %d | Z=%lf %lf %lf | EPS %lf\n", iter, z[0], z[1], z[2], eps);
+	}
+	else{
+		fprintf(stderr, "ERROR: not yet implemented\n");
+		exit(EXIT_FAILURE);
+	}
+	printf("ROOTS %lf %lf %lf | ACCURACY %lf\n", roots[0], roots[1], roots[2], eps_min);
+}
 
 void drawPotential(schrodingerParameters params){
 	FILE* dataFile = fopen("data/potential.dat", "w");
@@ -203,13 +270,35 @@ void drawPotential(schrodingerParameters params){
 }
 
 void solveSchrodinger(schrodingerParameters params){
-	double z=0.0;
-	
-	z=findRoot(params);
-	params.doDraw=1;
-	if(solveODE(z, params, NULL) == GSL_SUCCESS)
+	if(params.potential.type==0){
+		double z;
+		z=findRoot(params);
+		params.doDraw=1;
+		if(solveODE(z, params, NULL) == GSL_SUCCESS)
+			printf("SUCCESS: the equation was solved\n");
+	}
+	else if(params.potential.type==1 || params.potential.type==2){
+		double z[3]={0.0, 0.0, 0.0};
+		double y[3]={0.0, 0.0, 0.0};
+		findMultipleRoots(params, z);
+		params.doDraw=1;
+		for(int i_domain=0; i_domain<params.potential.type+1; i_domain++){
+			params.currentDomain=i_domain;
+			if(solveODE(z[i_domain], params, y) != GSL_SUCCESS){
+				fprintf(stderr, "ERROR : in solveSchrodinger(), the ODE n°%d could not be solved\n", i_domain);
+				exit(EXIT_FAILURE);
+			}
+			params.prevDomainY0=y[0];
+			params.prevDomainY2=y[2];
+		}
 		printf("SUCCESS: the equation was solved\n");
-	
+			
+	}
+	else{
+		fprintf(stderr, "ERROR : in solveSchrodinger(), parameters are incorrect\n");
+		exit(EXIT_FAILURE);
+	}
+
 	drawPotential(params);
 }
 
@@ -237,13 +326,27 @@ int main(){
 			= 0,65625 * 1e(-34+19+15)
 			= 0,65625
 	*/
+
+	FILE* dataFile = fopen("data/phi.dat", "w"); fprintf(dataFile, "x phi(x)\n"); fclose(dataFile); // We initialize the file phi.dat
+
 	double m = 6.25;
 	double l = 1.0;
 	double hbar = 0.65625;
 	double energy = hbar*hbar*4*M_PI*M_PI / (8*m*l*l); // ~=0.34 according to the formula : En = h^2 * n^2 / (8*m*l^2) 		So to get the n-th energy level we can just multiply by n^2 this value
 	double alpha = 2*m / (hbar*hbar); // we have (d^2)(phi(x))/d(x^2) + alpha phi(x) = 0
-
 	potentialParams potential;
+	schrodingerParameters params;
+
+	params.energy=energy;
+	params.bound=l;
+	params.potential.a=0.0;
+	params.potential.b=l;
+	params.alpha=alpha;
+	params.doDraw=0;
+	params.currentDomain=0;
+	params.prevDomainY0=0.0;
+	params.prevDomainY2=0.0;
+
 	potential.type=0;
 	potential.v0=1.0;
 	
@@ -254,12 +357,8 @@ int main(){
 		potential.b = 0.6;
 	}
 
-	schrodingerParameters params;
 	params.potential=potential;
-	params.energy=energy;
-	params.bound=l;
-	params.alpha=alpha;
-	params.doDraw=0;
+	
 	
 	//FILE* dataFile = fopen("data/phiALL.dat", "w");fclose(dataFile);
 	solveSchrodinger(params);
