@@ -1,6 +1,6 @@
 # Schrodinger's equation Solver
 
-Project written in C and bash
+Project written in C and bash<br>
 Solves the time independent Schrodinger equation for 3 different potential cases:
 - V = 0 <br>
 <img width="400px" src="https://github.com/RobinMeneust/SchrodingerGraph/blob/main/images/potential_1.jpg?raw=true"/><br>
