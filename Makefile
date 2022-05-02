@@ -15,10 +15,10 @@ obj/%.o: src/%.c $(HEAD)
 .PHONY : cleanlinux cleanwin doc run
 
 cleanlinux:
-	rm obj/*.o; rm graphs/*.jpg; rm data/*.dat;
+	rm obj/*.o; rm data/*.dat;
 
 cleanwin:
-	del obj\*.o && del graphs\*.jpg && del data\*.dat;
+	del obj\*.o && del data\*.dat;
 
 cleandoclinux:
 	rm doxygen/html
