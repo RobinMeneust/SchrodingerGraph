@@ -18,7 +18,7 @@ cleanlinux:
 	rm obj/*.o; rm graphs/*.jpg; rm data/*.dat;
 
 cleanwin:
-	del obj\*.o
+	del obj\*.o && del graphs\*.jpg && del data\*.dat;
 
 cleandoclinux:
 	rm doxygen/html
