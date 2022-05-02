@@ -27,7 +27,7 @@ You can also directly run the executable in the bin folder to get the data files
 
 ## Miscellaneous
 
-### To remove the .o files you can do the following
+### To remove the .o and .dat files you can do the following
 
 #### Windows
 ````
