@@ -22,7 +22,7 @@ Use `make` to compile the code
 ## Execution
 
 Use `make run` to execute it and generate the graph<br>
-You can also directly run the executable in the bin folder and/or launch the script gnuplotDraw.bash to get the graph
+You can also directly run the executable in the bin folder to get the data files and/or launch the script gnuplotDraw.bash to get the graph from those files
 
 
 ## Miscellaneous
