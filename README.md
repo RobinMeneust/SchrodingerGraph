@@ -2,34 +2,14 @@
 
 Project written in C and bash
 Solves the time independent Schrodinger equation for 3 different potential cases:
-  - V = 0
-    <img src="https://render.githubusercontent.com/render/math?math=V(x) = \begin{cases}
-  \infty &\text{if } x \leq 0 \\
-  0 &\text{if } x \in \lbrack 0;L \rbrack  \\
-  \infty &\text{if } x \geq L \\
-  \end{cases}">
-  ``math
+- V = 0 <br>
+<img width="400px" src="https://github.com/RobinMeneust/SchrodingerGraph/blob/main/images/potential_1.jpg?raw=true"/><br>
+
+- V is a step<br>
+  <img width="400px" src="https://github.com/RobinMeneust/SchrodingerGraph/blob/main/images/potential_2.jpg?raw=true"/><br>
   
-  ``
-  - V is rectangular
-  ``math
-  V(x) = \begin{cases}
-  \infty &\text{if } x \leq 0 \\
-  0 &\text{if } x \in \lbrack 0;a \rbrack  \\
-  V0 &\text{if } x \in \lbrack a;b \rbrack  \\
-  0 &\text{if } x \in \lbrack b;L \rbrack  \\
-  \infty &\text{if } x \geq L \\
-  \end{cases}
-  ``
-  - V is a step
-  ``math
-  V(x) = \begin{cases}
-  \infty &\text{if } x \leq 0 \\
-  0 &\text{if } x \in \lbrack 0;a \rbrack  \\
-  V0 &\text{if } x \in \lbrack a;L \rbrack  \\
-  \infty &\text{if } x \geq L \\
-  \end{cases}
-  ``
+- V is rectangular<br>
+  <img width="400px" src="https://github.com/RobinMeneust/SchrodingerGraph/blob/main/images/potential_3.jpg?raw=true"/><br>
 
 ## Dependencies
   - GSL - GNU Scientific Library
