@@ -1,41 +1,59 @@
+/**
+ * \file main.c
+ * \brief It gets the user input, checks it, initializes the variables and sent it to the solver to get the data needed to draw the graph of a solution to the Schrodinger equation
+ * \date 2022
+ */
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "../include/schrodinger_functions.h"
 #include "../include/types_and_constants.h"
 
+/*
+We choose those units to get values near to 1 :
+length = 1e-9 m = 1 nm
+energy :  eV
+mass:
+	energy: 1 J = (1/1.6) * 1e19 eV
+	length: 1 m = 1e9 nm => m^-2 = 1e-18 nm^-2
+	time: 1 s = 1e15 fs => (1s)^2 = 1e30 fs^2		(fs = "femtosecond")
+
+	and the mass (kg) is homogeneous to E/c^2 (J.s^2/m^2) so we have:
+
+	1 kg 	= 1 J.s².m^-2
+			= (1/1.6) * 1e(19-18) eV.s^2.nm^-2
+			= (1/1.6) * 10 eV.s^2.nm^-2
+			= (1/1.6) * 10 * 1e30 eV.fs^2.nm^-2
+			= 6.25 * 1e30 eV.nm^-2.fs^2
+
+	and m  	= 9.109 * 1e-31 kg
+			= 9.109 * 1e-31 * 6.25 * 10^30 eV.nm^-2.fs^2
+			= 9.109 * 0.1 * 6.25 eV.nm^-2.fs^2
+			= 5.693 eV.nm^-2.fs^2
+
+
+hbar 	= 1.05e-34 J.s 
+		= 1.05e-34 * (1/1.6) * 1e19 * 1e15 eV.fs
+		= 0.65625 * 1e(-34+19+15) eV.fs
+		= 0.65625 eV.fs
+*/
+
+/**
+ * \fn int main()
+ * \brief Main function of this project
+ * \return 0 if the function runs and exits correctly
+ */
+
 int main(){
-	/*
-	We choose those units to get values near to 1 :
-	length = 1e-9 m = 1 nm
-	energy = 1.6e-19 J = 1 eV
-	mass:
-		energy: 1 J = (1/1.6) * 1e19 eV
-		length: 1 m = 1e9 nm => m^-2 = 1e-18 nm^-2
-		time: 1 s = 1e15 fs => (1s)^2 = 1e30 fs^2		(fs = "femtosecond")
-
-		=> J.m^-2.s^2 = (1/1.6) * 10 eV.nm^-2.s^2
-
-		and a mass (kg) is homogeneous to E/c² (J.s²/m²) so we have:
-		9,109 × 10−31
-		=> m	= 1e-30 kg	= 1e-30 * (1/1.6) * 10 eV.nm^-2.s^2
-				= (1/1.6) * 1e-29 eV.nm^-2.s^2
-				= (1/1.6) * 10 eV.nm^-2.fs^2
-				= 6.25 eV.nm^-2.fs^2
-
-	hbar 	= 1.05e-34 J.s 
-			= 1.05e-34 * (1/1.6) * 1e19 * 1e15 eV.fs
-			= 0,65625 * 1e(-34+19+15)
-			= 0,65625
-	*/
-
 	FILE* dataFile = fopen("data/phi.dat", "w"); fprintf(dataFile, "x phi(x)\n"); fclose(dataFile); // We initialize the file phi.dat
 
-	double m = 6.25;
+	double m = 5.693;
 	double l = 1.0;
 	double hbar = 0.65625;
 	double energy = hbar*hbar*4*M_PI*M_PI / (8*m*l*l); // ~=0.34 according to the formula : En = h^2 * n^2 / (8*m*l^2) 		So to get the n-th energy level we can just multiply by n^2 this value
-	double alpha = 2*m / (hbar*hbar); // we have (d^2)(phi(x))/d(x^2) + alpha phi(x) = 0
+	double alpha = 2*m / (hbar*hbar); // we have (d^2)(phi(x))/d(x^2) + alpha (E-V) phi(x) = 0
 	int energyLevel=1;
 	char potentialTypeInText[50];
 	potentialParams potential;
@@ -64,7 +82,7 @@ int main(){
 	}
 
 	if(potential.type!=0){ // if V(x) != 0 for all x
-		printf("Give the value of the potential in the well when it's not null: V0 = "); scanf("%lf", &(potential.v0));
+		printf("Give the value in volts of the potential in the well when it's not null: V0 = "); scanf("%lf", &(potential.v0));
 		potential.a = 0.4;
 		if(potential.type==1)
 			potential.b = l; // because we only have 2 domains: [0,a] and [a,l]

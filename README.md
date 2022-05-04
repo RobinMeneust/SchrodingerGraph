@@ -27,16 +27,21 @@ You can also directly run the executable in the bin folder to get the data files
 
 ## Miscellaneous
 
+### To generates the doxygen documentation
+````
+make doc:
+````
+
+### To clean the doxygen documentation folder
+
+````
+make cleandoc:
+````
+
 ### To remove the .o and .dat files you can do the following
 
-#### Windows
 ````
-make cleanwin
-````
-
-#### Linux
-````
-make cleanlinux
+make clean
 ````
 
 

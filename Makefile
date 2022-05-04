@@ -12,19 +12,13 @@ $(PROG) : $(OBJ)
 obj/%.o: src/%.c $(HEAD)
 	$(CC) -c $< -o $@
 
-.PHONY : cleanlinux cleanwin doc run
+.PHONY : clean cleandoc doc run
 
-cleanlinux:
+clean:
 	rm obj/*.o; rm data/*.dat;
 
-cleanwin:
-	del obj\*.o && del data\*.dat;
-
-cleandoclinux:
-	rm doxygen/html
-
-cleandocwin:
-	del doxygen\html
+cleandoc:
+	rm -r doxygen/html
 
 doc:
 	doxygen doxygen/Doxyfile

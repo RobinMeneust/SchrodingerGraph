@@ -1,5 +1,19 @@
+/**
+ * \file schrodinger_functions.c
+ * \brief Contains functions used to solve the Schrodinger equation with the given parameters
+ * \date 2022
+ */
+
 #include "../include/types_and_constants.h"
 #include "../include/schrodinger_functions.h"
+
+/**
+ * \fn double getPotential(double x, potentialParams potential)
+ * \brief Get V(x) at a given x and with the given parameters that define V(x)
+ * \param x Point where we want to get the potential
+ * \param potential Contains all the information about the potential, it gives its value
+ * \return Value of the potential at the point x: V(x)
+ */
 
 double getPotential(double x, potentialParams potential){
 	switch(potential.type){
@@ -25,24 +39,46 @@ double getPotential(double x, potentialParams potential){
 	}
 }
 
+/**
+ * \fn double getCoefficientFromParams(double x, schrodingerParameters params)
+ * \brief Calculate the coefficient of phi which is in the equation of Schrodinger : phi''(x) + C(x)*phi(x) = 0
+ * \param x Point where we want to get the coefficient
+ * \param params Contains all the parameters sent to the main solver
+ * \return Value of the coefficient of phi(x) in the equation
+ */
 
-// Calculate the coefficient of phi (C) which is in the equation of Schrodinger : phi'' + C*phi = 0
 double getCoefficientFromParams(double x, schrodingerParameters params)
 {
 	return params.alpha*(params.energy-getPotential(x, params.potential));
 }
 
-// calculate f(y0,y1,y2)
-int y_derivative (double x, const double y[], double f[] /* = dydt*/, void *params){
-	double alpha = getCoefficientFromParams(x, *(schrodingerParameters*) params);
+/**
+ * \fn int y_derivative (double x, const double y[], double f[], void *params)
+ * \brief Calculate f(y0,y1,y2) which is the derivative of the vector (y0(x),y1(x),y2(x))
+ * \param x Point where we want to get the derivative
+ * \param y Previous value of the vector (y0(x),y1(x),y2(x))
+ * \param f Derivative f(y0,y1,y2)
+ * \param params Contains all the parameters sent to the main solver
+ * \return Status: it's GSL_SUCCESS if there was no error
+ */
+
+int y_derivative (double x, const double y[], double f[], void *params){
+	double coeff = getCoefficientFromParams(x, *(schrodingerParameters*) params);
 	f[0]=y[1];
-	f[1]=(-1.0)*alpha*y[0];
+	f[1]=(-1.0)*coeff*y[0];
 	f[2]=y[0]*y[0];
 
 	return GSL_SUCCESS;
 }
 
-// solve the ODE with the given parameters to get the function phi(x), and draw it if params.doDraw!=0
+/**
+ * \fn int solveODE(double z, schrodingerParameters params, double f[3])
+ * \brief Solve the ODE with the given parameters to get the function phi(x), and draw it if params.doDraw!=0
+ * \param z Derivative of phi(x) at x=0 (i.e: z = y1(0))
+ * \param params Contains all the parameters sent to the main solver
+ * \param f Value of the vector (y0(L),y1(L),y2(L)) (L is the last value taken by x)
+ * \return Status: it's GSL_SUCCESS if there was no error
+ */
 
 int solveODE(double z, schrodingerParameters params, double f[3]){
 	FILE* dataFile=NULL;
@@ -88,17 +124,12 @@ int solveODE(double z, schrodingerParameters params, double f[3]){
 	for (int i = 1; i <= N_POINTS; i++)
 	{
 		xi += length / (double)N_POINTS;
-		//printf("xi : %lf\n", xi);
-		//if(xi>0.35)
-		//	sleep(1);
 		int status = gsl_odeiv2_driver_apply(driver, &x, xi, y);
 		if (status != GSL_SUCCESS)
 		{
 			printf ("error, return value=%d\n", status);
 			break;
 		}
-		//printf("f(%.2lf)=%lf\n", x, y[0]);
-		//printf("Z=%lf | Y(%lf) = %lf %lf %lf\n", z, x, y[0], y[1], y[2]);
 		if(params.doDraw)
 			fprintf(dataFile, "%lf %lf\n", x, y[0]);
 	}
@@ -116,7 +147,13 @@ int solveODE(double z, schrodingerParameters params, double f[3]){
 	return GSL_SUCCESS;
 }
 
-// Find the root with the shooting method
+/**
+ * \fn double findRoot(schrodingerParameters params)
+ * \brief Find the value of z=y1(0) so that the edge conditions are met
+ * \param params Contains all the parameters sent to the main solver
+ * \return y1(0)
+ */
+
 double findRoot(schrodingerParameters params){
 	double y[3]={0.0, 0.0, 0.0};
 	double step=0.01;
@@ -140,7 +177,15 @@ double findRoot(schrodingerParameters params){
 	return best_z_approx;
 }
 
-// call solveODE() to solve the equation on different domains with different potentials
+/**
+ * \fn int solveODEMultipleDomains(const gsl_vector* input, void* params, gsl_vector* f)
+ * \brief Check if (E,z) allow us to meet the edge conditions. It Calls solveODE() to solve the equation on different domains with different potentials
+ * \param input Vector (E,z) that we are cheking
+ * \param params Contains all the parameters sent to the main solver
+ * \param f Value of the vector (y0(L),y1(L),y2(L)) (L is the last value taken by x)
+ * \return Status: it's GSL_SUCCESS if there was no error
+ */
+
 int solveODEMultipleDomains(const gsl_vector* input, void* params, gsl_vector* f){
 	schrodingerParameters parameters = *(schrodingerParameters*) params;
 	double y1[3]={0.0};
@@ -190,7 +235,14 @@ int solveODEMultipleDomains(const gsl_vector* input, void* params, gsl_vector* f
 	return GSL_SUCCESS;
 }
 
-// Use GSL to find (E,z) so that the final conditions are met (phi(L)=0 & N(L)=1)
+/**
+ * \fn void findMultipleRoots(schrodingerParameters params, double roots[2])
+ * \brief Find the roots (E,z) that meet the edge conditions (phi(L)=0 & N(L)=1).
+ * \param params Contains all the parameters sent to the main solver
+ * \param roots Vector (E,z) that meet the edge conditions, if it exists
+ * \return Status: it's GSL_SUCCESS if there was no error
+ */
+
 void findMultipleRoots(schrodingerParameters params, double roots[2]){
 	gsl_multiroot_fsolver *s = gsl_multiroot_fsolver_alloc (gsl_multiroot_fsolver_hybrids, 2);
 	int status;
@@ -224,7 +276,12 @@ void findMultipleRoots(schrodingerParameters params, double roots[2]){
 	gsl_vector_free (x);
 }
 
-// Write in a file the points used to draw V(x)
+/**
+ * \fn void savePotential(schrodingerParameters params)
+ * \brief Write in a file the points used to draw V(x)
+ * \param params Contains all the parameters sent to the main solver
+ */
+
 void savePotential(schrodingerParameters params){
 	FILE* dataFile = fopen("data/potential.dat", "w");
 	fprintf(dataFile, "x V(x)\n");
@@ -253,7 +310,12 @@ void savePotential(schrodingerParameters params){
 	fclose(dataFile);
 }
 
-//Solve Schrodinger's equation with the given parameters
+/**
+ * \fn void solveSchrodinger(schrodingerParameters* params)
+ * \brief Solve Schrodinger's equation with the given parameters
+ * \param params Contains all the parameters used by this function to solve the equation
+ */
+
 void solveSchrodinger(schrodingerParameters* params){
 	if(params->potential.type==0){
 		double z;
@@ -288,5 +350,4 @@ void solveSchrodinger(schrodingerParameters* params){
 		exit(EXIT_FAILURE);
 	}
 	savePotential(*params);
-
 }
