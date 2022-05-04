@@ -37,7 +37,7 @@ make doc
 make cleandoc
 ````
 
-### To remove the .o and .dat files you can do the following
+### To remove the .o and .dat files
 
 ````
 make clean
