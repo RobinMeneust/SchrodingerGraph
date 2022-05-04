@@ -82,7 +82,7 @@ int main(){
 	}
 
 	if(potential.type!=0){ // if V(x) != 0 for all x
-		printf("Give the value in volts of the potential in the well when it's not null: V0 = "); scanf("%lf", &(potential.v0));
+		printf("Give the value of the potential in the well when it's not null: V0 = "); scanf("%lf", &(potential.v0));
 		potential.a = 0.4;
 		if(potential.type==1)
 			potential.b = l; // because we only have 2 domains: [0,a] and [a,l]

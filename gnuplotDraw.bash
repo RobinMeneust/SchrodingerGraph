@@ -32,7 +32,7 @@ energy="$(tail -n 1 data/phi.dat)"
 line_style="with lines"
 
 # We get the data needed to create the graph
-gnuplot_instructions="'data/phi.dat' u 1:2 title 'phi(x)' $line_style lc rgb 'blue', 'data/potential.dat' u 1:2 title 'V(x) (volts)' $line_style lw 4 lc rgb 'black'"
+gnuplot_instructions="'data/phi.dat' u 1:2 title 'phi(x)' $line_style lc rgb 'blue', 'data/potential.dat' u 1:2 title 'V(x)' $line_style lw 4 lc rgb 'black'"
 
 # We create the graph
 gnuplot -e "reset; set terminal jpeg size 1600, 900; set grid; set ylabel ''; set xlabel 'x (nm)'; set title 'phi(x) for a $potentialType and E = $energy '; set output 'graphs/schrodingerGraph.jpg'; plot $gnuplot_instructions"

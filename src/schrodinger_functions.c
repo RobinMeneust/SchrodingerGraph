@@ -92,25 +92,25 @@ int solveODE(double z, schrodingerParameters params, double f[3]){
 	
 	gsl_odeiv2_system sys = {y_derivative, NULL, 3, &params}; // we initialize the ODE system
 	// we set the bounds
-	if(params.potential.type!=0 && params.currentDomain==0){
-		x = 0.0;
-		length=params.potential.a-x;
-	}
-	else if(params.currentDomain==1){
-		x = params.potential.a;
-		length=params.potential.b-x;
-		y1_ini=params.prevDomainY0;
-		y2_ini=params.prevDomainY1;
-		y3_ini=params.prevDomainY2;
-	}
-	else if(params.currentDomain==2){
-		x = params.potential.b;
-		length=params.bound-x;
-		y1_ini=params.prevDomainY0;
-		y2_ini=params.prevDomainY1;
-		y3_ini=params.prevDomainY2;
-	}
 
+	if(params.currentDomain==0)
+	{
+		if(params.potential.type!=0)
+			length=params.potential.a-x;
+	}
+	else{
+		y1_ini=params.prevDomainY0;
+		y2_ini=params.prevDomainY1;
+		y3_ini=params.prevDomainY2;
+		if(params.currentDomain==1){
+			x = params.potential.a;
+			length=params.potential.b-x;
+		}
+		else if(params.currentDomain==2){
+			x = params.potential.b;
+			length=params.bound-x;
+		}
+	}
 
 	gsl_odeiv2_driver * driver = gsl_odeiv2_driver_alloc_y_new (&sys, gsl_odeiv2_step_rkf45, 1e-6, 1e-6, 0.0);
 
@@ -127,7 +127,7 @@ int solveODE(double z, schrodingerParameters params, double f[3]){
 		int status = gsl_odeiv2_driver_apply(driver, &x, xi, y);
 		if (status != GSL_SUCCESS)
 		{
-			printf ("error, return value=%d\n", status);
+			printf ("ERROR: in solveODE() %d\n", status);
 			break;
 		}
 		if(params.doDraw)
@@ -188,45 +188,23 @@ double findRoot(schrodingerParameters params){
 
 int solveODEMultipleDomains(const gsl_vector* input, void* params, gsl_vector* f){
 	schrodingerParameters parameters = *(schrodingerParameters*) params;
-	double y1[3]={0.0};
-	double y2[3]={0.0};
-	double y3[3]={0.0};
+	double y[3]={0.0};
 	double z=gsl_vector_get(input, 1);
 	parameters.energy=gsl_vector_get(input, 0);
 
-	if(parameters.potential.type==1){
-		parameters.currentDomain = 0;
-		solveODE(z, parameters, y1);
-
-		parameters.prevDomainY0=y1[0];
-		parameters.prevDomainY1=y1[1];
-		parameters.prevDomainY2=y1[2];
-		parameters.currentDomain = 1;
-		solveODE(z, parameters, y2);
-
-		gsl_vector_set(f, 0, y2[0]);
-		gsl_vector_set(f, 1, y2[2]-1);
-	}
-	else if(parameters.potential.type==2){
-		parameters.currentDomain = 0;
-		solveODE(z, parameters, y1);
-
-		parameters.prevDomainY0=y1[0];
-		parameters.prevDomainY1=y1[1];
-		parameters.prevDomainY2=y1[2];
-		parameters.currentDomain = 1;
-		solveODE(z, parameters, y2);
-
-		parameters.prevDomainY0=y2[0];
-		parameters.prevDomainY1=y2[1];
-		parameters.prevDomainY2=y2[2];
-		parameters.currentDomain = 2;
-		solveODE(z, parameters, y3);
-
-		parameters.currentDomain = 0;
-
-		gsl_vector_set(f, 0, y3[0]);
-		gsl_vector_set(f, 1, y3[2]-1);
+	if(parameters.potential.type==1 || parameters.potential.type==2){
+		for(int i_domain=0; i_domain<parameters.potential.type+1; i_domain++){
+			parameters.currentDomain = i_domain;
+			if(solveODE(z, parameters, y) != GSL_SUCCESS){
+				fprintf(stderr, "ERROR : in solveODEMultipleDomains(), the ODE n°%d could not be solved\n", i_domain);
+				exit(EXIT_FAILURE);
+			}
+			parameters.prevDomainY0=y[0];
+			parameters.prevDomainY1=y[1];
+			parameters.prevDomainY2=y[2];
+		}
+		gsl_vector_set(f, 0, y[0]);
+		gsl_vector_set(f, 1, y[2]-1);
 	}
 	else{
 		fprintf(stderr, "ERROR: incorrect parameters in solveODEMultipleDomains()\n");
@@ -244,7 +222,7 @@ int solveODEMultipleDomains(const gsl_vector* input, void* params, gsl_vector* f
  */
 
 void findMultipleRoots(schrodingerParameters params, double roots[2]){
-	gsl_multiroot_fsolver *s = gsl_multiroot_fsolver_alloc (gsl_multiroot_fsolver_hybrids, 2);
+	gsl_multiroot_fsolver *s = gsl_multiroot_fsolver_alloc (gsl_multiroot_fsolver_hybrid, 2);
 	int status;
 	size_t i, iter = 0;
 	gsl_multiroot_function f = {&solveODEMultipleDomains, 2, &params};
