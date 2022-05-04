@@ -302,3 +302,7 @@ x phi(x)
 0.992000 0.068729
 0.996000 0.034375
 1.000000 0.000000
+
+potential_type & energy:
+rectangular potential in an infinite well
+1.327

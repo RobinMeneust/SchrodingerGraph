@@ -254,31 +254,31 @@ void savePotential(schrodingerParameters params){
 }
 
 //Solve Schrodinger's equation with the given parameters
-void solveSchrodinger(schrodingerParameters params){
-	if(params.potential.type==0){
+void solveSchrodinger(schrodingerParameters* params){
+	if(params->potential.type==0){
 		double z;
-		z=findRoot(params);
-		params.doDraw=1;
-		if(solveODE(z, params, NULL) == GSL_SUCCESS)
+		z=findRoot(*params);
+		params->doDraw=1;
+		if(solveODE(z, *params, NULL) == GSL_SUCCESS)
 			printf("SUCCESS: the equation was solved\n");
 	}
-	else if(params.potential.type==1 || params.potential.type==2){
+	else if(params->potential.type==1 || params->potential.type==2){
 		double z=0.0;
 		double y[3]={0.0, 0.0, 0.0};
 		double roots[2] = {0.0, 0.0};
 
-		findMultipleRoots(params, roots);
-		params.energy=roots[0];
-		params.doDraw=1;
-		for(int i_domain=0; i_domain<params.potential.type+1; i_domain++){
-			params.currentDomain=i_domain;
-			if(solveODE(roots[1], params, y) != GSL_SUCCESS){
+		findMultipleRoots(*params, roots);
+		params->energy=roots[0];
+		params->doDraw=1;
+		for(int i_domain=0; i_domain<params->potential.type+1; i_domain++){
+			params->currentDomain=i_domain;
+			if(solveODE(roots[1], *params, y) != GSL_SUCCESS){
 				fprintf(stderr, "ERROR : in solveSchrodinger(), the ODE n°%d could not be solved\n", i_domain);
 				exit(EXIT_FAILURE);
 			}
-			params.prevDomainY0=y[0];
-			params.prevDomainY1=y[1];
-			params.prevDomainY2=y[2];
+			params->prevDomainY0=y[0];
+			params->prevDomainY1=y[1];
+			params->prevDomainY2=y[2];
 		}
 		printf("SUCCESS: the equation was solved\n");
 	
@@ -287,6 +287,6 @@ void solveSchrodinger(schrodingerParameters params){
 		fprintf(stderr, "ERROR : in solveSchrodinger(), parameters are incorrect\n");
 		exit(EXIT_FAILURE);
 	}
-	savePotential(params);
+	savePotential(*params);
 
 }

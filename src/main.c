@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "../include/schrodinger_functions.h"
 #include "../include/types_and_constants.h"
 
@@ -35,6 +36,8 @@ int main(){
 	double hbar = 0.65625;
 	double energy = hbar*hbar*4*M_PI*M_PI / (8*m*l*l); // ~=0.34 according to the formula : En = h^2 * n^2 / (8*m*l^2) 		So to get the n-th energy level we can just multiply by n^2 this value
 	double alpha = 2*m / (hbar*hbar); // we have (d^2)(phi(x))/d(x^2) + alpha phi(x) = 0
+	int energyLevel=1;
+	char potentialTypeInText[50];
 	potentialParams potential;
 	schrodingerParameters params;
 
@@ -52,6 +55,7 @@ int main(){
 	potential.type=0;
 	potential.v0=1.0;
 	
+
 	printf("What case do you want to view\n0: V(x)=0 everywhere\n1: V(x) is a step\n2: V(x) is rectangular\nANSWER: "); scanf("%d", &(potential.type));
 
 	if(potential.type<0 || potential.type>2){
@@ -67,12 +71,39 @@ int main(){
 		else
 			potential.b=0.6;
 	}
+	else{
+		printf("Give the energy level that you want (n>0 and n is an integer): n = "); scanf("%d", &energyLevel);
+		if(energyLevel>0)
+			params.energy*= (energyLevel*energyLevel);
+		else{
+			fprintf(stderr, "ERROR: You need to provide a strictly positive integer\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	switch (potential.type)
+	{
+		case 0:
+			strcpy(potentialTypeInText, "null potential in an infinite well");
+			break;
+		case 1:
+			strcpy(potentialTypeInText, "step potential in an infinite well");
+			break;
+		case 2:
+			strcpy(potentialTypeInText, "rectangular potential in an infinite well");
+			break;
+		default:
+			fprintf(stderr, "ERROR: incorrect potential type in main()\n");
+			exit(EXIT_FAILURE);
+	}
 
 	params.potential=potential;
 	
-	
-	solveSchrodinger(params);
+	solveSchrodinger(&params);
 
+	dataFile = fopen("data/phi.dat", "a");
+	fprintf(dataFile, "\npotential_type & energy:\n%s\n%.3lf", potentialTypeInText, params.energy);
+	fclose(dataFile);
 
 	return 0;
 }

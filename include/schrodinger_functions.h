@@ -17,6 +17,6 @@ double findRoot(schrodingerParameters params);
 int solveODEMultipleDomains(const gsl_vector* input, void* params, gsl_vector* f);
 void findMultipleRoots(schrodingerParameters params, double roots[2]);
 void savePotential(schrodingerParameters params);
-void solveSchrodinger(schrodingerParameters params);
+void solveSchrodinger(schrodingerParameters* params);
 
 #endif
