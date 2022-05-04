@@ -61,8 +61,6 @@ int main(){
 
 	params.energy=energy;
 	params.bound=l;
-	params.potential.a=0.0;
-	params.potential.b=l;
 	params.alpha=alpha;
 	params.doDraw=0;
 	params.currentDomain=0;
@@ -72,6 +70,8 @@ int main(){
 
 	potential.type=0;
 	potential.v0=1.0;
+	potential.a=0.0;
+	potential.b=l;
 	
 
 	printf("What case do you want to view\n0: V(x)=0 everywhere\n1: V(x) is a step\n2: V(x) is rectangular\nANSWER: "); scanf("%d", &(potential.type));
