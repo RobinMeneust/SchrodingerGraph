@@ -44,4 +44,4 @@ make clean
 ````
 
 ### Notes
-For high or too small values (given by the user) the program may take longer or get stuck 
+For high values (given by the user) the program may take longer or get stuck
