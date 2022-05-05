@@ -22,7 +22,7 @@ int y_derivative (double x, const double y[], double f[], void *params);
 int solveODE(double z, schrodingerParameters params, double f[3]);
 double findRoot(schrodingerParameters params);
 int solveODEMultipleDomains(const gsl_vector* input, void* params, gsl_vector* f);
-void findMultipleRoots(schrodingerParameters params, double roots[2]);
+int findMultipleRoots(double x_init, schrodingerParameters params, double roots[2]);
 void savePotential(schrodingerParameters params);
 void solveSchrodinger(schrodingerParameters* params);
 

@@ -192,6 +192,12 @@ int solveODEMultipleDomains(const gsl_vector* input, void* params, gsl_vector* f
 	double z=gsl_vector_get(input, 1);
 	parameters.energy=gsl_vector_get(input, 0);
 
+	if(parameters.energy<=0){ // a negative energy caused the program to freeze
+		gsl_vector_set(f, 0, 1.0);
+		gsl_vector_set(f, 1, 1.0);
+		return GSL_SUCCESS;
+	}
+
 	if(parameters.potential.type==1 || parameters.potential.type==2){
 		for(int i_domain=0; i_domain<parameters.potential.type+1; i_domain++){
 			parameters.currentDomain = i_domain;
@@ -214,44 +220,41 @@ int solveODEMultipleDomains(const gsl_vector* input, void* params, gsl_vector* f
 }
 
 /**
- * \fn void findMultipleRoots(schrodingerParameters params, double roots[2])
+ * \fn int findMultipleRoots(double x_init, schrodingerParameters params, double roots[2])
  * \brief Find the roots (E,z) that meet the edge conditions (phi(L)=0 & N(L)=1).
+ * \param x_init Initial root value
  * \param params Contains all the parameters sent to the main solver
  * \param roots Vector (E,z) that meet the edge conditions, if it exists
  * \return Status: it's GSL_SUCCESS if there was no error
  */
 
-void findMultipleRoots(schrodingerParameters params, double roots[2]){
+int findMultipleRoots(double x_init, schrodingerParameters params, double roots[2]){
 	gsl_multiroot_fsolver *s = gsl_multiroot_fsolver_alloc (gsl_multiroot_fsolver_hybrid, 2);
-	int status;
+	int status=GSL_CONTINUE;
 	size_t i, iter = 0;
 	gsl_multiroot_function f = {&solveODEMultipleDomains, 2, &params};
-	double x_init[2] = {1.0, 1.0};
 	gsl_vector *x = gsl_vector_alloc (2);
-	gsl_vector_set (x, 0, x_init[0]);
-	gsl_vector_set (x, 1, x_init[1]);
+	gsl_vector_set (x, 0, x_init);
+	gsl_vector_set (x, 1, x_init);
 	
 	gsl_multiroot_fsolver_set (s, &f, x);
-
 	do
 	{
 		iter++;
 		status = gsl_multiroot_fsolver_iterate(s);
-
 		if (status)
 			break;
-
 		status = gsl_multiroot_test_residual (s->f, 1e-8);
-	}
-	while (status == GSL_CONTINUE && iter < 1000);
+
+	}while (status == GSL_CONTINUE && iter < 1000);
 
 	roots[0]=gsl_vector_get (s->x, 0); //E
 	roots[1]=gsl_vector_get (s->x, 1); //z
 
-	printf ("status = %s\n", gsl_strerror (status));
-
 	gsl_multiroot_fsolver_free (s);
 	gsl_vector_free (x);
+
+	return status;
 }
 
 /**
@@ -295,24 +298,55 @@ void savePotential(schrodingerParameters params){
  */
 
 void solveSchrodinger(schrodingerParameters* params){
+	double z=0.0;
 	if(params->potential.type==0){
-		double z;
 		z=findRoot(*params);
 		params->doDraw=1;
 		if(solveODE(z, *params, NULL) == GSL_SUCCESS)
 			printf("SUCCESS: the equation was solved\n");
 	}
 	else if(params->potential.type==1 || params->potential.type==2){
-		double z=0.0;
 		double y[3]={0.0, 0.0, 0.0};
-		double roots[2] = {0.0, 0.0};
+		double roots[10][2]={{0.0}};
+		int isAlreadyInArray;
+		int i_min_energy=0.0;
+		int i=0;
+		// we get the possible values for (E,z)
+		for(double x=0; x<5; x+=0.1){
+			if(findMultipleRoots(x, *params, roots[i])==GSL_SUCCESS){
+				isAlreadyInArray=0;
+				// We don't want to have multiple occurrences of one value so we don't save it in that case
+				for(int j=0; j<i; j++){
+					if(fabs(roots[i][0]-roots[j][0])<1e-5){ // if they are too close we ignore it
+						isAlreadyInArray=1;
+						break;
+					}
+				}
+				if(!isAlreadyInArray){
+					i++;
+					if(i>=10)
+						break;
+				}
+			}
+		}
+		if(i=0){ // if we haven't found any solution
+			fprintf(stderr, "ERROR : in solveSchrodinger(), no solution was found\n");
+			exit(EXIT_FAILURE);
+		}
+		// we search the minimum energy level Ei (here we can choose any energy level, it's just an arbitrary choice)
+		i_min_energy = 0;
+		for(i=1; i<10; i++){
+			if(roots[i][0]!=0 && roots[i][0] < roots[i_min_energy][0])
+				i_min_energy=i;
+		}
 
-		findMultipleRoots(*params, roots);
-		params->energy=roots[0];
+		params->energy=roots[i_min_energy][0];
 		params->doDraw=1;
+
+		// We solve the equation in the 2 or 3 domains
 		for(int i_domain=0; i_domain<params->potential.type+1; i_domain++){
 			params->currentDomain=i_domain;
-			if(solveODE(roots[1], *params, y) != GSL_SUCCESS){
+			if(solveODE(roots[i_min_energy][1], *params, y) != GSL_SUCCESS){
 				fprintf(stderr, "ERROR : in solveSchrodinger(), the ODE n°%d could not be solved\n", i_domain);
 				exit(EXIT_FAILURE);
 			}

@@ -73,7 +73,6 @@ int main(){
 	potential.a=0.0;
 	potential.b=l;
 	
-
 	printf("What case do you want to view\n0: V(x)=0 everywhere\n1: V(x) is a step\n2: V(x) is rectangular\nANSWER: "); scanf("%d", &(potential.type));
 
 	if(potential.type<0 || potential.type>2){
