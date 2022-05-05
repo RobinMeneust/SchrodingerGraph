@@ -231,7 +231,7 @@ int solveODEMultipleDomains(const gsl_vector* input, void* params, gsl_vector* f
 int findMultipleRoots(double x_init, schrodingerParameters params, double roots[2]){
 	gsl_multiroot_fsolver *s = gsl_multiroot_fsolver_alloc (gsl_multiroot_fsolver_hybrid, 2);
 	int status=GSL_CONTINUE;
-	size_t i, iter = 0;
+	size_t iter = 0;
 	gsl_multiroot_function f = {&solveODEMultipleDomains, 2, &params};
 	gsl_vector *x = gsl_vector_alloc (2);
 	gsl_vector_set (x, 0, x_init);
@@ -329,7 +329,7 @@ void solveSchrodinger(schrodingerParameters* params){
 				}
 			}
 		}
-		if(i=0){ // if we haven't found any solution
+		if(i==0){ // if we haven't found any solution
 			fprintf(stderr, "ERROR : in solveSchrodinger(), no solution was found\n");
 			exit(EXIT_FAILURE);
 		}

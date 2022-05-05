@@ -10,7 +10,7 @@ $(PROG) : $(OBJ)
 	$(CC) $^ -o $@ -lgsl -lgslcblas -lm
 
 obj/%.o: src/%.c $(HEAD)
-	$(CC) -c $< -o $@
+	$(CC) -c $< -Wall -o $@
 
 .PHONY : clean cleandoc doc run
 
