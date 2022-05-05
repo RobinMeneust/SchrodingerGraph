@@ -82,6 +82,10 @@ int main(){
 
 	if(potential.type!=0){ // if V(x) != 0 for all x
 		printf("Give the value of the potential in the well when it's not null: V0 = "); scanf("%lf", &(potential.v0));
+		if(potential.v0<0){
+			fprintf(stderr, "ERROR: You need to provide a positive value for V0\n");
+			exit(EXIT_FAILURE);
+		}
 		potential.a = 0.4;
 		if(potential.type==1)
 			potential.b = l; // because we only have 2 domains: [0,a] and [a,l]
@@ -97,6 +101,7 @@ int main(){
 			exit(EXIT_FAILURE);
 		}
 	}
+
 
 	switch (potential.type)
 	{
