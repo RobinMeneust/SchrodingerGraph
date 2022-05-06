@@ -87,8 +87,13 @@ int solveODE(double z, schrodingerParameters params, double f[3]){
 	double length=params.bound;
 	double y1_ini=0.0, y2_ini=z, y3_ini=0.0; // phi(0)=0 and N(0)=0
 
-	if(params.doDraw)
+	if(params.doDraw){
 		dataFile = fopen("data/phi.dat", "a");
+		if(dataFile==NULL){
+        	fprintf(stderr, "ERROR: the file data/phi.dat can't be opened or created. Please check if the folder data exists\n");
+        	exit(EXIT_FAILURE);
+    	}
+	}
 	
 	gsl_odeiv2_system sys = {y_derivative, NULL, 3, &params}; // we initialize the ODE system
 	// we set the bounds
@@ -265,6 +270,10 @@ int findMultipleRoots(double x_init, schrodingerParameters params, double roots[
 
 void savePotential(schrodingerParameters params){
 	FILE* dataFile = fopen("data/potential.dat", "w");
+	if(dataFile==NULL){
+        fprintf(stderr, "ERROR: the file data/potential.dat can't be opened or created. Please check if the folder data exists\n");
+        exit(EXIT_FAILURE);
+    }
 	fprintf(dataFile, "x V(x)\n");
 	double step=0.0;
 	if(params.potential.type==0){ // because there is only one value so 2 points are enough to draw the line

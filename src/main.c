@@ -47,7 +47,14 @@ hbar 	= 1.05e-34 J.s
  */
 
 int main(){
-	FILE* dataFile = fopen("data/phi.dat", "w"); fprintf(dataFile, "x phi(x)\n"); fclose(dataFile); // We initialize the file phi.dat
+	// We initialize the file phi.dat
+	FILE* dataFile = fopen("data/phi.dat", "w"); 
+	if(dataFile==NULL){
+        fprintf(stderr, "ERROR: the file data/phi.dat can't be opened or created. Please check if the folder data exists\n");
+        exit(EXIT_FAILURE);
+    }
+	fprintf(dataFile, "x phi(x)\n");
+	fclose(dataFile); 
 
 	double m = 5.693;
 	double l = 1.0;
@@ -81,9 +88,9 @@ int main(){
 	}
 
 	if(potential.type!=0){ // if V(x) != 0 for all x
-		printf("Give the value of the potential in the well when it's not null: V0 = "); scanf("%lf", &(potential.v0));
-		if(potential.v0<0){
-			fprintf(stderr, "ERROR: You need to provide a positive value for V0\n");
+		printf("Give the value of the potential in the well when it's not null, between 0 and 60: V0 = "); scanf("%lf", &(potential.v0));
+		if(potential.v0<0 || potential.v0>60){
+			fprintf(stderr, "ERROR: You need to provide a value in [0,60] for V0\n");
 			exit(EXIT_FAILURE);
 		}
 		potential.a = 0.4;
@@ -102,7 +109,7 @@ int main(){
 		}
 	}
 
-
+	//Used by gnuplot
 	switch (potential.type)
 	{
 		case 0:
@@ -124,6 +131,10 @@ int main(){
 	solveSchrodinger(&params);
 
 	dataFile = fopen("data/phi.dat", "a");
+	if(dataFile==NULL){
+        fprintf(stderr, "ERROR: the file data/phi.dat can't be opened or created. Please check if the folder data exists\n");
+        exit(EXIT_FAILURE);
+    }
 	fprintf(dataFile, "\npotential_type & energy:\n%s\n%.3lf", potentialTypeInText, params.energy);
 	fclose(dataFile);
 
