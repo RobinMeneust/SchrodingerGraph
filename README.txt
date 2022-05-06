@@ -19,6 +19,7 @@ Dependencies:
 ///////////////////////////////////
 Installation:
 
+Check if the bin, obj and data folders exist, if they don't, you have to create them
 Use make to compile the code
 
 ///////////////////////////////////

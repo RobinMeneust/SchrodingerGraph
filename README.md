@@ -17,6 +17,7 @@ Solves the time independent Schrodinger equation for 3 different potential cases
 
 ## Installation
 
+Check if the bin, obj and data folders exist, if they don't, you have to create them<br>
 Use `make` to compile the code
 
 ## Execution

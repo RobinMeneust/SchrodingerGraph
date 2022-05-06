@@ -2,7 +2,7 @@
 /// Solveur d'équations de Schrodinger
 ///////////////////////////////////
 
-Projet écrit en C et bash
+Projet écrit en C et en bash
 
 Résout l'équation de Schrodinger indépendante du temps pour 3 cas de potentiel différents :
 
@@ -19,6 +19,7 @@ Eléments nécessaires:
 ///////////////////////////////////
 Installation:
 
+Vérifiez si les dossiers bin, obj et data existent, s'ils n'existent pas, vous devez les créer
 Utilisez make pour compiler le code
 
 ///////////////////////////////////
