@@ -1,6 +1,6 @@
 /**
  * \file main.c
- * \brief It gets the user input, checks it, initializes the variables and sent it to the solver to get the data needed to draw the graph of a solution to the Schrodinger equation
+ * \brief It gets the user's input, checks it, initializes the variables and sends it to the solver to get the required data to draw the graph of a solution to the Schrodinger equation
  * \date 2022
  */
 
