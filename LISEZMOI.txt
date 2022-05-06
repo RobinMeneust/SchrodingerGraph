@@ -1,0 +1,47 @@
+///////////////////////////////////
+/// Solveur d'équations de Schrodinger
+///////////////////////////////////
+
+Projet écrit en C et bash
+
+Résout l'équation de Schrodinger indépendante du temps pour 3 cas de potentiel différents :
+
+	- V = 0
+	- V est une marche
+	- V est rectangulaire
+
+///////////////////////////////////
+Eléments nécessaires:
+
+    GSL - GNU Scientific Library
+    Gnuplot
+
+///////////////////////////////////
+Installation:
+
+Utilisez make pour compiler le code
+
+///////////////////////////////////
+Exécution:
+
+Utilisez make run pour l'exécuter et générer le graphique.
+Vous pouvez également lancer directement l'exécutable dans le dossier bin pour obtenir les fichiers de données et lancer le script gnuplotDraw.bash pour obtenir le graphique à partir de ces fichiers.
+
+///////////////////////////////////
+Divers:
+
+Pour générer la documentation doxygen
+
+	make doc
+
+Pour vider le dossier de la documentation doxygen
+
+	make cleandoc
+
+Pour supprimer les fichiers .o et .dat
+
+	make clean
+
+Notes
+
+	Pour des valeurs élevées (données par l'utilisateur), le programme peut prendre plus de temps ou se bloquer.
