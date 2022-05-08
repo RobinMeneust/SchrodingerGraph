@@ -27,7 +27,7 @@ You can also directly run the executable in the bin folder to get the data files
 
 ## Miscellaneous
 
-### To generates the doxygen documentation
+### To generate the doxygen documentation
 ````
 make doc
 ````
