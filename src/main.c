@@ -61,7 +61,7 @@ int main(){
 	fprintf(dataFileSquare, "x |phi(x)|²\n");fclose(dataFileSquare);
 
 	double m = MASS_ELECTRON;
-	double l = 6.0;
+	double l = 1.0;
 	double hbar = 0.65625;
 	double energy = hbar*hbar*4*M_PI*M_PI / (8*m*l*l); // ~=0.34 according to the formula : En = h^2 * n^2 / (8*m*l^2) 		So to get the n-th energy level we can just multiply by n^2 this value
 	double alpha = 2*m / (hbar*hbar); // we have (d^2)(phi(x))/d(x^2) + alpha (E-V) phi(x) = 0
@@ -97,11 +97,11 @@ int main(){
 			fprintf(stderr, "ERROR: You need to provide a value in [0,60] for V0\n");
 			exit(EXIT_FAILURE);
 		}
-		potential.a = 2.0;
+		potential.a = 0.45;
 		if(potential.type==1)
 			potential.b = l; // because we only have 2 domains: [0,a] and [a,l]
 		else
-			potential.b = 4.0;
+			potential.b = 0.55;
 	}
 	else{
 		printf("Give the energy level that you want (n>0 and n is an integer): n = "); scanf("%d", &energyLevel);

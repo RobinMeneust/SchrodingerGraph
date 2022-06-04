@@ -309,21 +309,21 @@ void savePotential(schrodingerParameters params){
 		step=params.bound/500;
 	}
 	else{
-		step=params.bound/10;
+		step=params.bound/100;
 	}
 
 	double potentialX=0.0;
 	double prev_potentialX=0.0;
 
 	if(params.potential.type==3){
-		for(double x=0.0; x<=params.bound; x+=step){
+		for(double x=0.0; x<params.bound+step; x+=step){
 			potentialX = getPotential(x, params.potential);
 			fprintf(dataFile, "%lf %lf\n", x, potentialX);
 			prev_potentialX = potentialX;
 		}
 	}
 	else{
-		for(double x=0.0; x<=params.bound; x+=step){
+		for(double x=0.0; x<params.bound+step; x+=step){
 			potentialX = getPotential(x, params.potential);
 			// to get a vertical line and not a leaning wall
 			if(prev_potentialX<potentialX){
