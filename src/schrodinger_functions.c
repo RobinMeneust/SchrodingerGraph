@@ -26,6 +26,7 @@ double getPotential(double x, potentialParams potential){
 			else{
 				return potential.v0;
 			}
+			break;
 		case 2:		// rectangular potential
 			if(x<potential.a || x>potential.b){
 				return 0;
@@ -33,6 +34,21 @@ double getPotential(double x, potentialParams potential){
 			else{
 				return potential.v0;
 			}
+			break;
+		case 3:		// parabolic potential
+			if(x<potential.a || x>potential.b){
+				return 0;
+			}
+			else{
+				double m = (potential.b+potential.a)/2.0;
+				/* 	V(x) = c(x-a)(x-b)
+				 	=> V(m) = c(m-a)(m-b) = V0
+					=> c = V0 / (m-a)(m-b)
+				*/
+				double c = potential.v0/((m-potential.a)*(m-potential.b));
+				return c*(x-potential.a)*(x-potential.b);
+			}
+			break;
 		default:
 			fprintf(stderr, "ERROR : in getPotential(), parameters are incorrect\n");
 			exit(EXIT_FAILURE);
@@ -82,6 +98,7 @@ int y_derivative (double x, const double y[], double f[], void *params){
 
 int solveODE(double z, schrodingerParameters params, double f[3]){
 	FILE* dataFile=NULL;
+	FILE* dataFileSquare=NULL;
 
 	double x=0.0;
 	double length=params.bound;
@@ -89,7 +106,8 @@ int solveODE(double z, schrodingerParameters params, double f[3]){
 
 	if(params.doDraw){
 		dataFile = fopen("data/phi.dat", "a");
-		if(dataFile==NULL){
+		dataFileSquare = fopen("data/phi_square.dat", "a");
+		if(dataFile==NULL || dataFileSquare==NULL){
 			fprintf(stderr, "ERROR: the file data/phi.dat can't be opened or created. Please check if the folder data exists\n");
 			exit(EXIT_FAILURE);
     		}
@@ -122,6 +140,7 @@ int solveODE(double z, schrodingerParameters params, double f[3]){
 	double y[3] = {y1_ini, y2_ini, y3_ini}; //(y0,y1,y2)(x=0) = (0,z,0)
 	if(params.doDraw){
 		fprintf(dataFile, "%lf %lf\n", x, y[0]);
+		fprintf(dataFileSquare, "%lf %lf\n", x, y[0]*y[0]);
 	}
 	//We get the values of (y0,y1,y2)
 	double xi=x;
@@ -135,8 +154,10 @@ int solveODE(double z, schrodingerParameters params, double f[3]){
 			printf ("ERROR: in solveODE() %d\n", status);
 			break;
 		}
-		if(params.doDraw)
+		if(params.doDraw){
 			fprintf(dataFile, "%lf %lf\n", x, y[0]);
+			fprintf(dataFileSquare, "%lf %lf\n", x, y[0]*y[0]);
+		}
 	}
 
 	if(f!=NULL){
@@ -146,8 +167,10 @@ int solveODE(double z, schrodingerParameters params, double f[3]){
 	}
 
 	gsl_odeiv2_driver_free (driver);
-	if(params.doDraw)
+	if(params.doDraw){
 		fclose(dataFile);
+		fclose(dataFileSquare);
+	}
 	
 	return GSL_SUCCESS;
 }
@@ -195,6 +218,7 @@ int solveODEMultipleDomains(const gsl_vector* input, void* params, gsl_vector* f
 	schrodingerParameters parameters = *(schrodingerParameters*) params;
 	double y[3]={0.0};
 	double z=gsl_vector_get(input, 1);
+	int nbOfDomains=2;
 	parameters.energy=gsl_vector_get(input, 0);
 
 	if(parameters.energy<=0){ // a negative energy caused the program to freeze
@@ -203,8 +227,10 @@ int solveODEMultipleDomains(const gsl_vector* input, void* params, gsl_vector* f
 		return GSL_SUCCESS;
 	}
 
-	if(parameters.potential.type==1 || parameters.potential.type==2){
-		for(int i_domain=0; i_domain<parameters.potential.type+1; i_domain++){
+	if(parameters.potential.type==1 || parameters.potential.type==2 || parameters.potential.type==3){
+		if(parameters.potential.type>1)
+			nbOfDomains = 3;
+		for(int i_domain=0; i_domain<nbOfDomains; i_domain++){
 			parameters.currentDomain = i_domain;
 			if(solveODE(z, parameters, y) != GSL_SUCCESS){
 				fprintf(stderr, "ERROR : in solveODEMultipleDomains(), the ODE n°%d could not be solved\n", i_domain);
@@ -279,23 +305,36 @@ void savePotential(schrodingerParameters params){
 	if(params.potential.type==0){ // because there is only one value so 2 points are enough to draw the line
 		step=params.bound/2;
 	}
+	else if(params.potential.type==3){
+		step=params.bound/500;
+	}
 	else{
 		step=params.bound/10;
 	}
 
 	double potentialX=0.0;
 	double prev_potentialX=0.0;
-	for(double x=0.0; x<=params.bound; x+=step){
-		potentialX = getPotential(x, params.potential);
-		// to get a vertical line and not a leaning wall
-		if(prev_potentialX<potentialX){
-			fprintf(dataFile, "%lf %lf\n", x, 0.0);
+
+	if(params.potential.type==3){
+		for(double x=0.0; x<=params.bound; x+=step){
+			potentialX = getPotential(x, params.potential);
+			fprintf(dataFile, "%lf %lf\n", x, potentialX);
+			prev_potentialX = potentialX;
 		}
-		else if(prev_potentialX>potentialX){
-			fprintf(dataFile, "%lf %lf\n", x-step, 0.0);
+	}
+	else{
+		for(double x=0.0; x<=params.bound; x+=step){
+			potentialX = getPotential(x, params.potential);
+			// to get a vertical line and not a leaning wall
+			if(prev_potentialX<potentialX){
+				fprintf(dataFile, "%lf %lf\n", x, 0.0);
+			}
+			else if(prev_potentialX>potentialX){
+				fprintf(dataFile, "%lf %lf\n", x-step, 0.0);
+			}
+			fprintf(dataFile, "%lf %lf\n", x, potentialX);
+			prev_potentialX=potentialX;
 		}
-		fprintf(dataFile, "%lf %lf\n", x, potentialX);
-		prev_potentialX=potentialX;
 	}
 	fclose(dataFile);
 }
@@ -307,6 +346,7 @@ void savePotential(schrodingerParameters params){
  */
 
 void solveSchrodinger(schrodingerParameters* params){
+	int nbOfDomains=2;
 	double z=0.0;
 	if(params->potential.type==0){
 		z=findRoot(*params);
@@ -314,7 +354,7 @@ void solveSchrodinger(schrodingerParameters* params){
 		if(solveODE(z, *params, NULL) == GSL_SUCCESS)
 			printf("SUCCESS: the equation was solved\n");
 	}
-	else if(params->potential.type==1 || params->potential.type==2){
+	else if(params->potential.type==1 || params->potential.type==2 || params->potential.type==3){
 		double y[3]={0.0, 0.0, 0.0};
 		double roots[10][2]={{0.0}};
 		int isAlreadyInArray;
@@ -353,7 +393,11 @@ void solveSchrodinger(schrodingerParameters* params){
 		params->doDraw=1;
 
 		// We solve the equation in the 2 or 3 domains
-		for(int i_domain=0; i_domain<params->potential.type+1; i_domain++){
+
+		if(params->potential.type>1)
+			nbOfDomains = 3;
+
+		for(int i_domain=0; i_domain < nbOfDomains; i_domain++){
 			params->currentDomain=i_domain;
 			if(solveODE(roots[i_min_energy][1], *params, y) != GSL_SUCCESS){
 				fprintf(stderr, "ERROR : in solveSchrodinger(), the ODE n°%d could not be solved\n", i_domain);

@@ -25,14 +25,16 @@ checkDirAvailability(){
 checkDirAvailability "graphs"
 
 # We initialize the needed variables
-gnuplot_instructions=""
-gnuplot_instructionsALL=""
+gnuplot_instructionsPhi=""
+gnuplot_instructionsPhi2=""
 potentialType="$(tail -n 2 data/phi.dat | head -n 1)"
 energy="$(tail -n 1 data/phi.dat)"
 line_style="with lines"
 
 # We get the data needed to create the graph
-gnuplot_instructions="'data/phi.dat' u 1:2 title 'phi(x)' $line_style lc rgb 'blue', 'data/potential.dat' u 1:2 title 'V(x)' $line_style lw 4 lc rgb 'black'"
+gnuplot_instructionsPhi="'data/phi.dat' u 1:2 title '{/Symbol f}(x)' $line_style lc rgb 'blue', 'data/potential.dat' u 1:2 title 'V(x)' $line_style lw 4 lc rgb 'black'"
+gnuplot_instructionsPhi2="'data/phi_square.dat' u 1:2 title '|{/Symbol f}(x)|²' $line_style lc rgb 'blue', 'data/potential.dat' u 1:2 title 'V(x)' $line_style lw 4 lc rgb 'black'"
 
 # We create the graph
-gnuplot -e "reset; set terminal jpeg size 1600, 900; set grid; set ylabel ''; set xlabel 'x (nm)'; set title 'phi(x) for a $potentialType and E = $energy eV'; set output 'graphs/schrodingerGraph.jpg'; plot $gnuplot_instructions"
+gnuplot -e "reset; set terminal jpeg size 1600, 900; set grid; set ylabel ''; set xlabel 'x (nm)'; set title '{/Symbol f}(x) for a $potentialType and E = $energy eV'; set output 'graphs/schrodingerGraph.jpg'; plot $gnuplot_instructionsPhi"
+gnuplot -e "reset; set terminal jpeg size 1600, 900; set grid; set ylabel ''; set xlabel 'x (nm)'; set title '|{/Symbol f}(x)|² for a $potentialType and E = $energy eV'; set output 'graphs/schrodingerGraphProbability.jpg'; plot $gnuplot_instructionsPhi2"

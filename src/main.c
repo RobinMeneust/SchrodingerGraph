@@ -11,6 +11,9 @@
 #include "../include/schrodinger_functions.h"
 #include "../include/types_and_constants.h"
 
+#define MASS_PROTON 10456.25;
+#define MASS_ELECTRON 5.693;
+
 /*
 We choose those units to get values near to 1 :
 length = 1e-9 m = 1 nm
@@ -49,15 +52,16 @@ hbar 	= 1.05e-34 J.s
 int main(){
 	// We initialize the file phi.dat
 	FILE* dataFile = fopen("data/phi.dat", "w"); 
-	if(dataFile==NULL){
+	FILE* dataFileSquare = fopen("data/phi_square.dat", "w"); 
+	if(dataFile==NULL || dataFileSquare==NULL){
         fprintf(stderr, "ERROR: the file data/phi.dat can't be opened or created. Please check if the folder data exists\n");
         exit(EXIT_FAILURE);
     }
-	fprintf(dataFile, "x phi(x)\n");
-	fclose(dataFile); 
+	fprintf(dataFile, "x phi(x)\n");fclose(dataFile);
+	fprintf(dataFileSquare, "x |phi(x)|²\n");fclose(dataFileSquare);
 
-	double m = 5.693;
-	double l = 1.0;
+	double m = MASS_ELECTRON;
+	double l = 6.0;
 	double hbar = 0.65625;
 	double energy = hbar*hbar*4*M_PI*M_PI / (8*m*l*l); // ~=0.34 according to the formula : En = h^2 * n^2 / (8*m*l^2) 		So to get the n-th energy level we can just multiply by n^2 this value
 	double alpha = 2*m / (hbar*hbar); // we have (d^2)(phi(x))/d(x^2) + alpha (E-V) phi(x) = 0
@@ -80,9 +84,9 @@ int main(){
 	potential.a=0.0;
 	potential.b=l;
 	
-	printf("What case do you want to view\n0: V(x)=0 everywhere\n1: V(x) is a step\n2: V(x) is rectangular\nANSWER: "); scanf("%d", &(potential.type));
+	printf("What case do you want to view\n0: V(x)=0 everywhere\n1: V(x) is a step\n2: V(x) is rectangular\n3: V(x) is parabolic\nANSWER: "); scanf("%d", &(potential.type));
 
-	if(potential.type<0 || potential.type>2){
+	if(potential.type<0 || potential.type>3){
 		fprintf(stderr, "ERROR: incorrect value. You must provide a number between 0 and 2\n");
 		exit(EXIT_FAILURE);
 	}
@@ -93,11 +97,11 @@ int main(){
 			fprintf(stderr, "ERROR: You need to provide a value in [0,60] for V0\n");
 			exit(EXIT_FAILURE);
 		}
-		potential.a = 0.4;
+		potential.a = 2.0;
 		if(potential.type==1)
 			potential.b = l; // because we only have 2 domains: [0,a] and [a,l]
 		else
-			potential.b=0.6;
+			potential.b = 4.0;
 	}
 	else{
 		printf("Give the energy level that you want (n>0 and n is an integer): n = "); scanf("%d", &energyLevel);
@@ -108,7 +112,6 @@ int main(){
 			exit(EXIT_FAILURE);
 		}
 	}
-
 	//Used by gnuplot
 	switch (potential.type)
 	{
@@ -120,6 +123,9 @@ int main(){
 			break;
 		case 2:
 			strcpy(potentialTypeInText, "rectangular potential in an infinite well");
+			break;
+		case 3:
+			strcpy(potentialTypeInText, "parabolic potential in an infinite well");
 			break;
 		default:
 			fprintf(stderr, "ERROR: incorrect potential type in main()\n");
@@ -135,7 +141,10 @@ int main(){
         fprintf(stderr, "ERROR: the file data/phi.dat can't be opened or created. Please check if the folder data exists\n");
         exit(EXIT_FAILURE);
     }
-	fprintf(dataFile, "\npotential_type & energy:\n%s\n%.3lf", potentialTypeInText, params.energy);
+	if(params.energy<0.01)
+		fprintf(dataFile, "\npotential_type & energy:\n%s\n%.3e", potentialTypeInText, params.energy);
+	else
+		fprintf(dataFile, "\npotential_type & energy:\n%s\n%.3lf", potentialTypeInText, params.energy);
 	fclose(dataFile);
 
 	return 0;
